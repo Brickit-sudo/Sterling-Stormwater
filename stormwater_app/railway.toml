@@ -2,5 +2,5 @@
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "python -m streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true --server.fileWatcherType=none"
+startCommand = "python start.py"
 restartPolicyType = "on_failure"
