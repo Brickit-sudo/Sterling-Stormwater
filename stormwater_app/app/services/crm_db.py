@@ -128,6 +128,7 @@ def _seed_if_empty(c: sqlite3.Connection) -> None:
         "crm_leads": ["lead_id","name","email","phone","location","city","state","services","next_activity","poc","contact_name","gdrive_url","total_amount","submittal_deadline","expires","notes"],
         "crm_jobs": ["job_id","job_site","location","job_status","service","scope","scheduled_month","scheduled_date","owner","quoted_amount","actual_amount","site_id","client_id","lead_id","gdrive_url","notes"],
     }
+    c.execute("PRAGMA foreign_keys = OFF")
     for table, cols in table_cols.items():
         rows = data.get(table, [])
         if not rows:
@@ -138,6 +139,7 @@ def _seed_if_empty(c: sqlite3.Connection) -> None:
             f"INSERT OR IGNORE INTO {table} ({col_list}) VALUES ({placeholders})",
             [[r.get(col) for col in cols] for r in rows],
         )
+    c.execute("PRAGMA foreign_keys = ON")
     c.commit()
 
 
