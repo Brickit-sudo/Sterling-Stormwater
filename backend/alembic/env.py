@@ -17,9 +17,11 @@ target_metadata = Base.metadata
 
 
 def _direct_url() -> str:
-    url = settings.database_url_direct
+    url = settings.database_url_direct or settings.database_url
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if not url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
     return url
 
 
