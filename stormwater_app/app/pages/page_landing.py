@@ -31,6 +31,8 @@ def _logo_b64() -> str:
 
 
 def _kpi(label: str, value, sub: str = "", color: str = "#1AB738") -> None:
+    sub_html = (f'<div style="font-size:11px;color:#6e6f8f;margin-top:4px">{sub}</div>'
+                if sub else "")
     st.markdown(
         f'<div style="background:linear-gradient(135deg,#1c2240 0%,#1a1e38 100%);"'
         f'border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:18px 20px;'
@@ -40,16 +42,18 @@ def _kpi(label: str, value, sub: str = "", color: str = "#1AB738") -> None:
         f'margin-bottom:6px">{label}</div>'
         f'<div style="font-size:1.75rem;font-weight:800;color:{color};'
         f'letter-spacing:-0.02em;line-height:1">{value}</div>'
-        f'{"<div style=\\"font-size:11px;color:#6e6f8f;margin-top:4px\\">" + sub + "</div>" if sub else ""}'
+        f'{sub_html}'
         f'</div>',
         unsafe_allow_html=True,
     )
 
 
 def _pipeline_bar(status: str, count: int, total: int, quoted: float) -> None:
-    color  = _STATUS_COLOR.get(status, "#9699a6")
-    pct    = int(count / total * 100) if total else 0
-    q_str  = f"${quoted:,.0f}" if quoted else ""
+    color   = _STATUS_COLOR.get(status, "#9699a6")
+    pct     = int(count / total * 100) if total else 0
+    q_str   = f"${quoted:,.0f}" if quoted else ""
+    q_html  = (f'<div style="width:72px;text-align:right;font-size:11px;color:#6e6f8f">{q_str}</div>'
+               if q_str else '<div style="width:72px"></div>')
     st.markdown(
         f'<div style="display:flex;align-items:center;gap:12px;padding:8px 0;'
         f'border-bottom:1px solid rgba(255,255,255,0.04)">'
@@ -58,7 +62,7 @@ def _pipeline_bar(status: str, count: int, total: int, quoted: float) -> None:
         f'<div style="width:{pct}%;height:8px;background:{color};border-radius:4px;'
         f'transition:width 400ms ease"></div></div>'
         f'<div style="width:32px;text-align:right;font-size:13px;font-weight:700;color:{color}">{count}</div>'
-        f'{"<div style=\\"width:72px;text-align:right;font-size:11px;color:#6e6f8f\\">" + q_str + "</div>" if q_str else "<div style=\\"width:72px\\"></div>"}'
+        f'{q_html}'
         f'</div>',
         unsafe_allow_html=True,
     )
