@@ -12,7 +12,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Ensure runtime directories exist
-RUN mkdir -p projects output
+RUN mkdir -p projects output /appdata
+
+ENV DB_DIR=/appdata
 
 EXPOSE 8501
 

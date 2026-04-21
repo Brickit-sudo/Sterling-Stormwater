@@ -15,6 +15,7 @@ Schema:
 
 import hashlib
 import json
+import os
 import secrets
 import sqlite3
 import uuid
@@ -23,7 +24,8 @@ from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 _BASE_DIR    = Path(__file__).parent.parent.parent   # stormwater_app/
-DB_PATH      = _BASE_DIR / "stormwater.db"
+_DB_DIR      = Path(os.environ.get("DB_DIR", str(_BASE_DIR)))
+DB_PATH      = _DB_DIR / "stormwater.db"
 PROJECTS_DIR = _BASE_DIR / "projects"
 
 # ── Module-level singleton connection ─────────────────────────────────────────
