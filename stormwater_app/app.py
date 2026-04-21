@@ -54,9 +54,21 @@ render_sidebar()
 
 # ── Floating expand button when sidebar is collapsed ─────────────────────────
 if st.session_state.get("sidebar_hidden", False):
+    # CSS pins the button to top-left; Streamlit key class pattern: stkey__{key}
     st.markdown(
-        '<div style="position:fixed;top:12px;left:12px;z-index:1100">'
-        '<div id="sidebar-expand-hint"></div></div>',
+        "<style>"
+        "[class*='sidebar_expand_btn'] button,"
+        "[data-testid*='sidebar_expand_btn'] button{"
+        "  position:fixed!important;"
+        "  top:8px!important;left:8px!important;"
+        "  z-index:1100!important;"
+        "  width:36px!important;height:36px!important;"
+        "  min-height:0!important;padding:4px!important;"
+        "  font-size:14px!important;"
+        "  background:var(--bg-surface)!important;"
+        "  border:1px solid var(--border-default)!important;"
+        "}"
+        "</style>",
         unsafe_allow_html=True,
     )
     if st.button("▶", key="sidebar_expand_btn", help="Expand sidebar"):
@@ -92,6 +104,7 @@ PAGE_MAP = {
     "crm_prospects":    lambda: __import__("app.pages.page_crm_prospects",      fromlist=["render"]).render(),
     "crm_quotes":       lambda: __import__("app.pages.page_crm_quotes",         fromlist=["render"]).render(),
     "crm_svc_catalog":  lambda: __import__("app.pages.page_crm_service_catalog",fromlist=["render"]).render(),
+    "crm_comms":        lambda: __import__("app.pages.page_crm_comms",          fromlist=["render"]).render(),
 }
 
 PAGE_MAP.get(current_page, PAGE_MAP["home"])()

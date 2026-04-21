@@ -22,12 +22,14 @@ _STATUS_ICON  = {"Draft": "●",       "Review": "◑",       "Delivered": "✓"
 _FULLREPORT_PAGES = {"setup", "systems", "writeups", "export"}
 
 _SECTION_PAGES = {
-    "crm":      {"crm_sites", "crm_clients", "crm_leads", "crm_prospects", "crm_jobs"},
+    "crm":      {"crm_sites", "crm_clients", "crm_leads", "crm_prospects", "crm_jobs", "crm_comms"},
     "finance":  {"crm_invoices", "crm_quotes", "crm_svc_catalog"},
     "reports":  {"photosheet", "setup", "systems", "writeups", "export"},
     "archive":  {"crm_files", "library", "bulk_import", "crm_import"},
     "insights": {"trends", "knowledge_base"},
 }
+
+_DEFAULT_OPEN = {"reports"}
 
 
 # ── Sub-components ────────────────────────────────────────────────────────────
@@ -126,7 +128,7 @@ def _section_header(section_key: str, icon: str, label: str, current: str) -> bo
     if contains_current and not st.session_state.get(state_key, False):
         st.session_state[state_key] = True
 
-    is_open = st.session_state.get(state_key, False)
+    is_open = st.session_state.get(state_key, section_key in _DEFAULT_OPEN)
     chevron = "▼" if is_open else "▶"
     bg      = "rgba(26,183,56,0.08)" if is_open else "rgba(255,255,255,0.04)"
     border  = "#1AB738" if is_open else "transparent"
@@ -166,17 +168,24 @@ def _section_header(section_key: str, icon: str, label: str, current: str) -> bo
 # ── Main render ───────────────────────────────────────────────────────────────
 
 def render_sidebar():
-    # Inject JS to add/remove .sidebar-collapsed class based on session state
     is_collapsed = st.session_state.get("sidebar_hidden", False)
-    toggle_js = """
-    <script>
-    (function() {
-      var sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
-      if (sidebar) { sidebar.classList.%s('sidebar-collapsed'); }
-    })();
-    </script>
-    """ % ("add" if is_collapsed else "remove",)
-    st.markdown(toggle_js, unsafe_allow_html=True)
+
+    # Pure-CSS collapse: inject override rules on every rerun — no JS needed.
+    # When collapsed these rules fire; when expanded they're absent, so base styles win.
+    if is_collapsed:
+        st.markdown(
+            "<style>"
+            "[data-testid='stSidebar']{"
+            "  transform:translateX(-230px)!important;"
+            "  width:0!important;min-width:0!important;"
+            "  overflow:hidden!important;border-right:none!important;"
+            "}"
+            "[data-testid='stMain']{"
+            "  margin-left:0!important;"
+            "}"
+            "</style>",
+            unsafe_allow_html=True,
+        )
 
     with st.sidebar:
         proj    = get_project()
@@ -204,11 +213,12 @@ def render_sidebar():
         # CRM
         # ═══════════════════════════════════════════════════════════════════
         if _section_header("crm", "👥", "CRM", current):
-            _nav_item("crm_sites",     "🗄️", "Sites",     current)
-            _nav_item("crm_clients",   "👤", "Clients",   current)
-            _nav_item("crm_leads",     "🎯", "Leads",     current)
-            _nav_item("crm_prospects", "📋", "Prospects", current)
-            _nav_item("crm_jobs",      "🔧", "Jobs",      current)
+            _nav_item("crm_sites",     "🗄️", "Sites",           current)
+            _nav_item("crm_clients",   "👤", "Clients",         current)
+            _nav_item("crm_leads",     "🎯", "Leads",           current)
+            _nav_item("crm_prospects", "📋", "Prospects",       current)
+            _nav_item("crm_jobs",      "🔧", "Jobs",            current)
+            _nav_item("crm_comms",     "💬", "Communications",  current)
 
         # ═══════════════════════════════════════════════════════════════════
         # FINANCE

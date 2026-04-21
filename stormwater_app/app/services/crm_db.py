@@ -109,6 +109,23 @@ def init_crm_tables() -> None:
         CREATE INDEX IF NOT EXISTS idx_crm_jobs_status ON crm_jobs(job_status);
         CREATE INDEX IF NOT EXISTS idx_crm_jobs_owner  ON crm_jobs(owner);
         CREATE INDEX IF NOT EXISTS idx_crm_jobs_month  ON crm_jobs(scheduled_month);
+
+        CREATE TABLE IF NOT EXISTS crm_communications (
+            comm_id        TEXT PRIMARY KEY,
+            entity_type    TEXT NOT NULL,
+            entity_id      TEXT NOT NULL,
+            entity_name    TEXT,
+            type           TEXT NOT NULL DEFAULT 'note',
+            direction      TEXT DEFAULT 'outbound',
+            subject        TEXT,
+            body           TEXT,
+            attachment_url TEXT,
+            created_by     TEXT,
+            created_at     TEXT DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_crm_comm_entity  ON crm_communications(entity_type, entity_id);
+        CREATE INDEX IF NOT EXISTS idx_crm_comm_type    ON crm_communications(type);
+        CREATE INDEX IF NOT EXISTS idx_crm_comm_created ON crm_communications(created_at DESC);
     """)
     c.commit()
     _seed_if_empty(c)
@@ -425,3 +442,95 @@ def get_lead_activities() -> list[str]:
         "SELECT DISTINCT next_activity FROM crm_leads WHERE next_activity IS NOT NULL ORDER BY next_activity"
     ).fetchall()
     return [r[0] for r in rows]
+
+
+# ── Communications CRUD ───────────────────────────────────────────────────────
+
+def upsert_communication(d: dict) -> None:
+    c = get_conn()
+    c.execute("""
+        INSERT INTO crm_communications
+          (comm_id, entity_type, entity_id, entity_name, type, direction,
+           subject, body, attachment_url, created_by, created_at)
+        VALUES (:comm_id,:entity_type,:entity_id,:entity_name,:type,:direction,
+                :subject,:body,:attachment_url,:created_by,
+                COALESCE(:created_at, datetime('now')))
+        ON CONFLICT(comm_id) DO UPDATE SET
+          entity_name=excluded.entity_name, type=excluded.type,
+          direction=excluded.direction, subject=excluded.subject,
+          body=excluded.body,
+          attachment_url=COALESCE(excluded.attachment_url, crm_communications.attachment_url),
+          created_by=excluded.created_by
+    """, {k: d.get(k) for k in
+          ["comm_id","entity_type","entity_id","entity_name","type","direction",
+           "subject","body","attachment_url","created_by","created_at"]})
+    c.commit()
+
+
+def get_communications(entity_type: str = "", entity_id: str = "",
+                       comm_type: str = "", search: str = "",
+                       limit: int = 100) -> list[dict]:
+    c = get_conn()
+    sql  = "SELECT * FROM crm_communications WHERE 1=1"
+    args: list = []
+    if entity_type:
+        sql  += " AND entity_type=?"
+        args.append(entity_type)
+    if entity_id:
+        sql  += " AND entity_id=?"
+        args.append(entity_id)
+    if comm_type:
+        sql  += " AND type=?"
+        args.append(comm_type)
+    if search:
+        sql  += " AND (subject LIKE ? OR body LIKE ? OR entity_name LIKE ?)"
+        q     = f"%{search}%"
+        args += [q, q, q]
+    sql += " ORDER BY created_at DESC LIMIT ?"
+    args.append(limit)
+    return [dict(r) for r in c.execute(sql, args).fetchall()]
+
+
+def delete_communication(comm_id: str) -> None:
+    c = get_conn()
+    c.execute("DELETE FROM crm_communications WHERE comm_id=?", (comm_id,))
+    c.commit()
+
+
+# ── Analytics / Dashboard helpers ────────────────────────────────────────────
+
+def get_jobs_by_status() -> list[dict]:
+    c = get_conn()
+    rows = c.execute("""
+        SELECT job_status, COUNT(*) AS cnt,
+               COALESCE(SUM(quoted_amount), 0) AS quoted_total
+        FROM crm_jobs GROUP BY job_status
+    """).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_recent_jobs(limit: int = 10) -> list[dict]:
+    c = get_conn()
+    rows = c.execute("""
+        SELECT * FROM crm_jobs
+        ORDER BY updated_at DESC, scheduled_date DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_monthly_revenue() -> list[dict]:
+    _ORDER = ["January","February","March","April","May","June",
+              "July","August","September","October","November","December"]
+    c = get_conn()
+    rows = c.execute("""
+        SELECT scheduled_month,
+               COUNT(*) AS job_count,
+               COALESCE(SUM(quoted_amount), 0) AS quoted,
+               COALESCE(SUM(actual_amount), 0)  AS actual
+        FROM crm_jobs
+        WHERE scheduled_month IS NOT NULL AND scheduled_month != ''
+        GROUP BY scheduled_month
+    """).fetchall()
+    data = {r["scheduled_month"]: dict(r) for r in rows}
+    return [data[m] for m in _ORDER if m in data]

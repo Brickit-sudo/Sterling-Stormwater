@@ -86,14 +86,22 @@ def render():
     section_header("Sites", "All client sites — search, view, and manage.")
 
     # ── Filter row ────────────────────────────────────────────────────────────
-    col_s, col_f, col_add = st.columns([4, 2, 2])
+    col_s, col_f1, col_f2, col_f3, col_add = st.columns([4, 2, 2, 2, 2])
     with col_s:
         search = st.text_input("🔍 Search", placeholder="Site name, city, managed by…",
                                label_visibility="collapsed", key="crm_sites_search")
-    with col_f:
+    with col_f1:
         state_opts = ["All States"] + _STATES
         state_f = st.selectbox("State", state_opts, label_visibility="collapsed",
                                key="crm_sites_state")
+    with col_f2:
+        status_opts = ["All Status"] + [s for s in _STATUSES if s]
+        status_f = st.selectbox("Status", status_opts, label_visibility="collapsed",
+                                key="crm_sites_status")
+    with col_f3:
+        month_opts = ["All Months"] + [m for m in _MONTHS if m]
+        month_f = st.selectbox("Month", month_opts, label_visibility="collapsed",
+                               key="crm_sites_month")
     with col_add:
         if st.button("➕ Add Site", use_container_width=True):
             st.session_state["crm_site_add"] = not st.session_state.get("crm_site_add", False)
@@ -110,16 +118,24 @@ def render():
                 st.rerun()
 
     # ── Fetch + filter ────────────────────────────────────────────────────────
-    state_filter = "" if state_f == "All States" else state_f
+    state_filter  = "" if state_f  == "All States"  else state_f
+    status_filter = "" if status_f == "All Status"  else status_f
+    month_filter  = "" if month_f  == "All Months"  else month_f
     sites = get_all_crm_sites(search=search, state=state_filter)
+    if status_filter:
+        sites = [s for s in sites if (s.get("status") or "") == status_filter]
+    if month_filter:
+        sites = [s for s in sites if (s.get("service_month") or "") == month_filter]
 
     # ── Summary metrics ───────────────────────────────────────────────────────
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total Sites", len(sites))
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Showing", len(sites))
     states_present = set(s.get("state") for s in sites if s.get("state"))
     c2.metric("States", len(states_present))
-    active = sum(1 for s in sites if s.get("status") in ("Active",""))
+    active   = sum(1 for s in sites if s.get("status") == "Active")
+    inactive = sum(1 for s in sites if s.get("status") == "Inactive")
     c3.metric("Active", active)
+    c4.metric("Inactive", inactive)
     st.markdown("---")
 
     if not sites:

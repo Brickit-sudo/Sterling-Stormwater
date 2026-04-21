@@ -466,23 +466,11 @@ button[data-testid^="stBaseButton"]:disabled {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SIDEBAR COLLAPSE / EXPAND TOGGLE
+   SIDEBAR COLLAPSE — hide native Streamlit « button; we use our own ◀ toggle
 ═══════════════════════════════════════════════════════════════════════════ */
-[data-testid="stSidebarCollapseButton"] button,
-[data-testid="collapsedControl"] button {
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  z-index: 1001 !important;
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-default) !important;
-  border-radius: 6px !important;
-  color: var(--text-secondary) !important;
-}
-[data-testid="stSidebarCollapseButton"] button:hover,
-[data-testid="collapsedControl"] button:hover {
-  background: var(--bg-overlay) !important;
-  color: var(--text-primary) !important;
+[data-testid="stSidebarCollapseButton"],
+[data-testid="collapsedControl"] {
+  display: none !important;
 }
 
 /* Smooth topbar + viewtabs slide when sidebar toggles */

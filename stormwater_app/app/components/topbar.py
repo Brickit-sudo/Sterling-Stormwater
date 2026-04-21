@@ -28,6 +28,11 @@ _PAGE_ICONS = {
     "crm_jobs":       "🔧",
     "crm_leads":      "🎯",
     "crm_import":     "📥",
+    "crm_comms":      "💬",
+    "crm_prospects":  "📋",
+    "crm_invoices":   "🧾",
+    "crm_quotes":     "💰",
+    "crm_svc_catalog":"🔧",
 }
 
 _PAGE_TITLES = {
@@ -48,6 +53,11 @@ _PAGE_TITLES = {
     "crm_jobs":       "Jobs",
     "crm_leads":      "Leads",
     "crm_import":     "CRM Import",
+    "crm_comms":      "Communications",
+    "crm_prospects":  "Prospects",
+    "crm_invoices":   "Invoices",
+    "crm_quotes":     "Quote Builder",
+    "crm_svc_catalog":"Service Catalog",
 }
 
 _PAGE_VIEWS = {
@@ -68,6 +78,11 @@ _PAGE_VIEWS = {
     "crm_jobs":       [("🔧", "All Jobs"), ("📅", "Scheduled"), ("✅", "Complete")],
     "crm_leads":      [("🎯", "Pipeline"), ("📊", "By Activity")],
     "crm_import":     [("📥", "Import"), ("📊", "Stats")],
+    "crm_comms":      [("💬", "All Comms"), ("📧", "Emails"), ("📞", "Calls"), ("📝", "Notes")],
+    "crm_prospects":  [("📋", "All Prospects"), ("➕", "Add")],
+    "crm_invoices":   [("🧾", "All Invoices"), ("➕", "New Invoice")],
+    "crm_quotes":     [("💰", "Quotes"), ("➕", "New Quote")],
+    "crm_svc_catalog":[("🔧", "Catalog"), ("➕", "Add Service")],
 }
 
 _STATUS_COLOR = {
