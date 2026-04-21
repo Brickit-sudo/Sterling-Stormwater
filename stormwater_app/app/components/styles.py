@@ -497,8 +497,17 @@ button[data-testid^="stBaseButton"]:disabled {
 ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-testid="stSidebar"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
   background: var(--bg-surface) !important;
   border-right: 1px solid var(--border-default) !important;
+  width: var(--sidebar-width) !important;
+  min-width: var(--sidebar-width) !important;
+}
+
+[data-testid="stSidebar"][aria-expanded="false"] {
+  display: none !important;
 }
 
 [data-testid="stSidebar"] > div,
