@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Stormwater Report Generator",
+      "runtimeExecutable": "C:\\Program Files\\Python312\\python.exe",
+      "runtimeArgs": ["-m", "streamlit", "run", "app.py", "--server.port", "8502", "--server.headless", "false", "--browser.gatherUsageStats", "false"],
+      "port": 8502,
+      "cwd": "stormwater_app"
+    }
+  ]
+}
