@@ -10,8 +10,12 @@ Tables (crm_ prefix avoids collision with report-workflow tables):
 """
 
 from __future__ import annotations
+import json
 import sqlite3
+from pathlib import Path
 from .db import get_conn
+
+_SEED_PATH = Path(__file__).parent.parent.parent / "data" / "crm_seed.json"
 
 
 # ── Schema init ───────────────────────────────────────────────────────────────
@@ -106,6 +110,32 @@ def init_crm_tables() -> None:
         CREATE INDEX IF NOT EXISTS idx_crm_jobs_owner  ON crm_jobs(owner);
         CREATE INDEX IF NOT EXISTS idx_crm_jobs_month  ON crm_jobs(scheduled_month);
     """)
+    c.commit()
+    _seed_if_empty(c)
+
+
+def _seed_if_empty(c: sqlite3.Connection) -> None:
+    if not _SEED_PATH.exists():
+        return
+    if c.execute("SELECT COUNT(*) FROM crm_sites").fetchone()[0] > 0:
+        return
+    data = json.loads(_SEED_PATH.read_text())
+    table_cols = {
+        "crm_contacts": ["client_id","first_name","last_name","email","phone","sites_managed","managed_by","active_status","account","state","notes"],
+        "crm_sites": ["site_id","name","address","city","state","county","zip","systems","contact","client_id","managed_by","email","phone","gdrive_url","service_month","submittal_due_date","contract_start","contract_end","budget","status","notes"],
+        "crm_leads": ["lead_id","name","email","phone","location","city","state","services","next_activity","poc","contact_name","gdrive_url","total_amount","submittal_deadline","expires","notes"],
+        "crm_jobs": ["job_id","job_site","location","job_status","service","scope","scheduled_month","scheduled_date","owner","quoted_amount","actual_amount","site_id","client_id","lead_id","gdrive_url","notes"],
+    }
+    for table, cols in table_cols.items():
+        rows = data.get(table, [])
+        if not rows:
+            continue
+        placeholders = ",".join("?" * len(cols))
+        col_list = ",".join(cols)
+        c.executemany(
+            f"INSERT OR IGNORE INTO {table} ({col_list}) VALUES ({placeholders})",
+            [[r.get(col) for col in cols] for r in rows],
+        )
     c.commit()
 
 
