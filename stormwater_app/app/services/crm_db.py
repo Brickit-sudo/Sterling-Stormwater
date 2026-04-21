@@ -117,9 +117,11 @@ def init_crm_tables() -> None:
 def _seed_if_empty(c: sqlite3.Connection) -> None:
     if not _SEED_PATH.exists():
         return
-    if c.execute("SELECT COUNT(*) FROM crm_sites").fetchone()[0] > 0:
-        return
     data = json.loads(_SEED_PATH.read_text())
+    seed_count = len(data.get("crm_sites", []))
+    db_count = c.execute("SELECT COUNT(*) FROM crm_sites").fetchone()[0]
+    if db_count >= seed_count:
+        return
     table_cols = {
         "crm_contacts": ["client_id","first_name","last_name","email","phone","sites_managed","managed_by","active_status","account","state","notes"],
         "crm_sites": ["site_id","name","address","city","state","county","zip","systems","contact","client_id","managed_by","email","phone","gdrive_url","service_month","submittal_due_date","contract_start","contract_end","budget","status","notes"],

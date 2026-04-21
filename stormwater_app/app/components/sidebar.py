@@ -154,7 +154,7 @@ def _section_header(section_key: str, icon: str, label: str, current: str) -> bo
         f'</style>',
         unsafe_allow_html=True,
     )
-    if st.button(f"{icon}  {label}", key=f"section_toggle_{section_key}",
+    if st.button(f"{chevron}  {icon}  {label}", key=f"section_toggle_{section_key}",
                  use_container_width=True):
         st.session_state[state_key] = not is_open
         st.rerun()

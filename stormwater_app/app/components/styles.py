@@ -496,21 +496,9 @@ button[data-testid^="stBaseButton"]:disabled {
    SIDEBAR — monday.com #1c1f3b dark navy
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Force sidebar to always be visible regardless of Streamlit collapse state */
 [data-testid="stSidebar"] {
-  display: block !important;
-  transform: translateX(0) !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: fixed !important;
-  left: 0 !important;
-  top: 0 !important;
-  height: 100vh !important;
-  z-index: 999 !important;
   background: var(--bg-surface) !important;
   border-right: 1px solid var(--border-default) !important;
-  width: var(--sidebar-width) !important;
-  min-width: var(--sidebar-width) !important;
 }
 
 [data-testid="stSidebar"] > div,

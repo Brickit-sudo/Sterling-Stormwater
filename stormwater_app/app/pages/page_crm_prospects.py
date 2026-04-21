@@ -4,7 +4,38 @@ Prospects Pipeline — 372 Excel-imported companies to reach out to.
 """
 import streamlit as st
 from app.components.ui_helpers import section_header
-from app.services.api_client import get_all_prospects, update_prospect
+from app.services.api_client import update_prospect
+from app.services.crm_db import get_conn
+
+
+def _get_prospects_local(status="", priority="", search=""):
+    c = get_conn()
+    rows = c.execute("SELECT * FROM crm_leads").fetchall()
+    results = []
+    for r in rows:
+        d = dict(r)
+        results.append({
+            "lead_id":       d.get("lead_id"),
+            "company_name":  d.get("name"),
+            "address":       d.get("location"),
+            "city":          d.get("city"),
+            "state":         d.get("state"),
+            "contact_email": d.get("email"),
+            "contact_phone": d.get("phone"),
+            "contact_name":  d.get("contact_name"),
+            "lead_priority": "Medium",
+            "status":        "New",
+            "observed_bmps": d.get("services"),
+            "notes_for_outreach": d.get("notes"),
+            "compliance_type": d.get("next_activity"),
+        })
+    if status:
+        results = [p for p in results if p.get("status") == status]
+    if search:
+        s = search.lower()
+        results = [p for p in results if s in (p.get("company_name") or "").lower()
+                   or s in (p.get("city") or "").lower()]
+    return results
 
 _STATUS_FLOW  = ["New", "Contacted", "Qualified", "Converted", "Dead"]
 _PRIORITY_COLOR = {"High": "#e2445c", "Medium": "#ffcb00", "Low": "#579bfc"}
@@ -49,7 +80,7 @@ def render():
 
     s_filter = "" if status_f == "All" else status_f
     p_filter = "" if priority_f == "All" else priority_f
-    prospects = get_all_prospects(status=s_filter, priority=p_filter, search=search)
+    prospects = _get_prospects_local(status=s_filter, priority=p_filter, search=search)
 
     if state_f != "All":
         prospects = [p for p in prospects if p.get("state") == state_f]
