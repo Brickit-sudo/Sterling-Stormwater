@@ -52,6 +52,17 @@ if not st.session_state.get("token"):
 # ── Universal sidebar — always visible after login ───────────────────────────
 render_sidebar()
 
+# ── Floating expand button when sidebar is collapsed ─────────────────────────
+if st.session_state.get("sidebar_hidden", False):
+    st.markdown(
+        '<div style="position:fixed;top:12px;left:12px;z-index:1100">'
+        '<div id="sidebar-expand-hint"></div></div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("▶", key="sidebar_expand_btn", help="Expand sidebar"):
+        st.session_state["sidebar_hidden"] = False
+        st.rerun()
+
 # ── Flat page router — current_page drives everything ────────────────────────
 current_page = get_session("current_page", "home")
 

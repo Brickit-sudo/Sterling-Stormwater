@@ -498,16 +498,27 @@ button[data-testid^="stBaseButton"]:disabled {
 
 [data-testid="stSidebar"] {
   display: block !important;
+  transform: translateX(0) !important;
   visibility: visible !important;
   opacity: 1 !important;
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  height: 100vh !important;
+  z-index: 999 !important;
   background: var(--bg-surface) !important;
   border-right: 1px solid var(--border-default) !important;
   width: var(--sidebar-width) !important;
   min-width: var(--sidebar-width) !important;
+  transition: width 200ms ease, transform 200ms ease !important;
 }
 
-[data-testid="stSidebar"][aria-expanded="false"] {
-  display: none !important;
+/* Collapsed state: slide out */
+[data-testid="stSidebar"].sidebar-collapsed {
+  transform: translateX(calc(-1 * var(--sidebar-width))) !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
 }
 
 [data-testid="stSidebar"] > div,

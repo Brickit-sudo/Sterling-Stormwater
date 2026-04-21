@@ -166,17 +166,35 @@ def _section_header(section_key: str, icon: str, label: str, current: str) -> bo
 # ── Main render ───────────────────────────────────────────────────────────────
 
 def render_sidebar():
+    # Inject JS to add/remove .sidebar-collapsed class based on session state
+    is_collapsed = st.session_state.get("sidebar_hidden", False)
+    toggle_js = """
+    <script>
+    (function() {
+      var sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+      if (sidebar) { sidebar.classList.%s('sidebar-collapsed'); }
+    })();
+    </script>
+    """ % ("add" if is_collapsed else "remove",)
+    st.markdown(toggle_js, unsafe_allow_html=True)
+
     with st.sidebar:
         proj    = get_project()
         meta    = proj.meta
         status  = getattr(meta, "status", "Draft")
         current = get_session("current_page", "home")
 
-        # ── Logo / workspace header ───────────────────────────────────────────
-        if LOGO_PATH.exists():
-            st.image(str(LOGO_PATH), use_container_width=True)
-        else:
-            _workspace_header(status)
+        # ── Collapse toggle ───────────────────────────────────────────────────
+        c_logo, c_toggle = st.columns([4, 1])
+        with c_logo:
+            if LOGO_PATH.exists():
+                st.image(str(LOGO_PATH), use_container_width=True)
+            else:
+                _workspace_header(status)
+        with c_toggle:
+            if st.button("◀", key="sidebar_collapse_btn", help="Collapse sidebar"):
+                st.session_state["sidebar_hidden"] = True
+                st.rerun()
 
         _nav_rule()
         _nav_item("home", "🏠", "Home", current)
