@@ -18,6 +18,5 @@ EXPOSE 8501
 
 ENV PYTHONUNBUFFERED=1
 
-COPY start.sh .
-RUN chmod +x start.sh
-CMD ["./start.sh"]
+COPY start.py .
+CMD ["python", "start.py"]
