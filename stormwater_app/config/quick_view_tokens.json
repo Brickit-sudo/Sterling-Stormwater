@@ -1,0 +1,24 @@
+{
+  "view_prefix": [
+    "View",
+    "View of",
+    "Surface View",
+    "Inside View"
+  ],
+  "features": [
+    "Inlet",
+    "Outlet",
+    "Inlet Area",
+    "Inside",
+    "Surface",
+    "Overall",
+    "Maintenance",
+    "Pipe"
+  ],
+  "numbers": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ]
+}

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: transparent;
+    overflow: hidden;
+    padding: 4px 2px 6px 2px;
+    user-select: none;
+  }
+
+  #strip {
+    max-height: 260px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px 2px 2px 2px;
+  }
+
+  #strip::-webkit-scrollbar { width: 5px; }
+  #strip::-webkit-scrollbar-thumb { background: #3d4f58; border-radius: 3px; }
+  #strip::-webkit-scrollbar-track { background: #0a2030; }
+
+  /* ── System group block ── */
+  .group-block {
+    margin-bottom: 7px;
+  }
+
+  .group-header {
+    font-size: 9px;
+    font-weight: 700;
+    color: #8094D4;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 2px 6px 2px 5px;
+    background: #1a2d4a;
+    border-left: 3px solid #2d4f6e;
+    border-radius: 3px 3px 0 0;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .group-header.uncategorized {
+    color: #5c6c75;
+    background: #1c2d38;
+    border-left-color: #3d4f58;
+  }
+
+  .group-header .group-count {
+    font-size: 8px;
+    font-weight: 400;
+    color: #5c6c75;
+    margin-left: 5px;
+    flex-shrink: 0;
+  }
+
+  .group-header.uncategorized .group-count {
+    color: #5c6c75;
+  }
+
+  .group-photos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-left: 3px;
+  }
+
+  /* ── Photo thumbnail ── */
+  .photo-item {
+    flex: 0 0 auto;
+    width: 70px;
+    cursor: pointer;
+    border: 2px solid #3d4f58;
+    border-radius: 4px;
+    background: #1c2d38;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: border-color 0.1s, box-shadow 0.1s;
+  }
+
+  .photo-item:hover {
+    border-color: #1eaedb;
+    box-shadow: 0 1px 5px rgba(30,174,219,0.25);
+    z-index: 1;
+  }
+
+  .photo-item.selected {
+    border-color: #27AD3D;
+    box-shadow: 0 0 0 2px rgba(39,173,61,0.22);
+  }
+
+  .photo-item img {
+    width: 66px;
+    height: 50px;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  .photo-item .no-img {
+    width: 66px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5c6c75;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+
+  .photo-item .label {
+    font-size: 8.5px;
+    font-weight: 600;
+    text-align: center;
+    padding: 2px 2px 2px;
+    color: #b8c4c2;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+    background: #152e3e;
+  }
+
+  .photo-item.selected .label {
+    color: #27AD3D;
+    background: #0d2535;
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 80px;
+    color: #5c6c75;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<div id="strip"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var selectedPid = "";
+
+  function sendValue(value) {
+    window.parent.postMessage(
+      { isStreamlitMessage: true, type: "streamlit:setComponentValue", apiVersion: 1, value: value },
+      "*"
+    );
+  }
+
+  function setFrameHeight(h) {
+    window.parent.postMessage(
+      { isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: h },
+      "*"
+    );
+  }
+
+  function componentReady() {
+    window.parent.postMessage(
+      { isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1 },
+      "*"
+    );
+  }
+
+  function render(groups, newSelectedPid) {
+    selectedPid = newSelectedPid || "";
+    var strip = document.getElementById("strip");
+    strip.innerHTML = "";
+
+    if (!groups || groups.length === 0) {
+      strip.innerHTML = '<div class="empty-state">No photos uploaded yet</div>';
+      setFrameHeight(96);
+      return;
+    }
+
+    groups.forEach(function (group) {
+      var isUncat = !group.system || group.system === "Uncategorized";
+      var block = document.createElement("div");
+      block.className = "group-block";
+
+      // ── Group header ──────────────────────────────────────────────────────
+      var header = document.createElement("div");
+      header.className = "group-header" + (isUncat ? " uncategorized" : "");
+
+      var nameSpan = document.createElement("span");
+      var label = isUncat
+        ? "Uncategorized"
+        : (group.caption_id
+            ? group.system + " \u2013 " + group.caption_id
+            : group.system);
+      nameSpan.textContent = label;
+      nameSpan.title = label;
+      nameSpan.style.overflow = "hidden";
+      nameSpan.style.textOverflow = "ellipsis";
+      header.appendChild(nameSpan);
+
+      var countSpan = document.createElement("span");
+      countSpan.className = "group-count";
+      countSpan.textContent = group.photos.length + (group.photos.length === 1 ? " photo" : " photos");
+      header.appendChild(countSpan);
+
+      block.appendChild(header);
+
+      // ── Photos row ────────────────────────────────────────────────────────
+      var row = document.createElement("div");
+      row.className = "group-photos";
+
+      group.photos.forEach(function (p) {
+        var item = document.createElement("div");
+        item.className = "photo-item" + (p.photo_id === selectedPid ? " selected" : "");
+        item.dataset.id = p.photo_id;
+
+        if (p.thumb_src) {
+          var img = document.createElement("img");
+          img.src = p.thumb_src;
+          img.alt = "#" + p.order;
+          item.appendChild(img);
+        } else {
+          var ph = document.createElement("div");
+          ph.className = "no-img";
+          ph.textContent = "\uD83D\uDCF7";
+          item.appendChild(ph);
+        }
+
+        var lbl = document.createElement("div");
+        lbl.className = "label";
+        lbl.textContent = "#" + p.order;
+        item.appendChild(lbl);
+
+        item.addEventListener("click", function () {
+          // Update visual selection immediately (optimistic)
+          document.querySelectorAll(".photo-item").forEach(function (el) {
+            el.classList.toggle("selected", el.dataset.id === p.photo_id);
+          });
+          selectedPid = p.photo_id;
+          sendValue({ type: "select", pid: p.photo_id });
+        });
+
+        row.appendChild(item);
+      });
+
+      block.appendChild(row);
+      strip.appendChild(block);
+    });
+
+    // Scroll selected photo into view
+    requestAnimationFrame(function () {
+      var sel = strip.querySelector(".selected");
+      if (sel) sel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      updateHeight();
+    });
+  }
+
+  function updateHeight() {
+    var strip = document.getElementById("strip");
+    var h = Math.min(strip.scrollHeight + 14, 270);
+    setFrameHeight(h);
+  }
+
+  window.addEventListener("message", function (event) {
+    var data = event.data;
+    if (!data || typeof data !== "object") return;
+    if (data.type === "streamlit:render") {
+      var args = data.args || {};
+      render(args.groups_data || [], args.selected_pid || "");
+    }
+  });
+
+  componentReady();
+  setFrameHeight(100);
+})();
+</script>
+</body>
+</html>
