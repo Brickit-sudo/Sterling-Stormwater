@@ -514,8 +514,8 @@ button[data-testid^="stBaseButton"]:disabled {
   padding-bottom: 0 !important;
 }
 
-/* Sidebar nav buttons */
-[data-testid="stSidebar"] .stButton > button {
+/* Sidebar nav buttons — target button element directly via kind attr (Streamlit 1.55+) */
+[data-testid="stSidebar"] button[kind="secondary"] {
   background: transparent !important;
   border: none !important;
   color: #9699a6 !important;
@@ -530,42 +530,31 @@ button[data-testid^="stBaseButton"]:disabled {
   padding: 7px 8px 7px 6px !important;
   height: 36px !important;
   min-height: 36px !important;
+  width: 100% !important;
   transition: background var(--motion-fast) var(--ease-out),
               color var(--motion-fast) var(--ease-out) !important;
 }
-/* Force inner markdown container to fill width and sit left */
-[data-testid="stSidebar"] .stButton > button > *,
-[data-testid="stSidebar"] .stButton > button [data-testid="stMarkdownContainer"],
-[data-testid="stSidebar"] .stButton > button p {
+[data-testid="stSidebar"] button[kind="secondary"] > *,
+[data-testid="stSidebar"] button[kind="secondary"] [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] button[kind="secondary"] p {
   margin: 0 !important;
   width: 100% !important;
   text-align: left !important;
   justify-content: flex-start !important;
 }
-[data-testid="stSidebar"] .stButton > button:hover {
+[data-testid="stSidebar"] button[kind="secondary"]:hover {
   background: var(--bg-overlay) !important;
   color: var(--text-primary) !important;
 }
 
-/* Active nav item - uses stVerticalBlock > direct-child to avoid ancestor bleed */
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div:has([data-testid="stMarkdownContainer"]:has(.sw-nav.sw-active)) + div .stButton > button {
+/* Active nav item */
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div:has([data-testid="stMarkdownContainer"]:has(.sw-nav.sw-active)) + div button[kind="secondary"] {
   color: #1AB738 !important;
   font-weight: 600 !important;
 }
 
-/* Indented sub-items */
-[data-testid="stSidebar"] div:has(.sw-i1) + div .stButton > button {
-  padding-left: 22px !important;
-}
-[data-testid="stSidebar"] div:has(.sw-i2) + div .stButton > button {
-  padding-left: 36px !important;
-  font-size: 12px !important;
-  height: 30px !important;
-  min-height: 30px !important;
-}
-
-/* Primary buttons in sidebar */
-[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+/* Primary buttons in sidebar (Save/New) */
+[data-testid="stSidebar"] button[kind="primary"] {
   background: linear-gradient(180deg,#1AB738 0%,#149A2E 100%) !important;
   color: #04140A !important;
   border: 1px solid rgba(26,183,56,0.60) !important;
@@ -574,12 +563,13 @@ button[data-testid^="stBaseButton"]:disabled {
   height: auto !important;
   min-height: 32px !important;
 }
-[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+[data-testid="stSidebar"] button[kind="primary"]:hover {
   background: linear-gradient(180deg,#22D344 0%,#18B135 100%) !important;
 }
-[data-testid="stSidebar"] .stButton > button *,
-[data-testid="stSidebar"] button[data-testid^="stBaseButton"] * {
-  background: transparent !important; background-color: transparent !important; color: inherit !important;
+[data-testid="stSidebar"] button[kind] * {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: inherit !important;
 }
 [data-testid="stSidebar"] .stTextInput > div > div > input {
   background: var(--bg-input) !important; color: var(--text-primary) !important;
