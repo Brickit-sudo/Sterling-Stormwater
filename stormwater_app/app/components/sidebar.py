@@ -300,21 +300,6 @@ def render_sidebar():
                     set_page("setup")
                     st.rerun()
 
-        # ── Off-screen hidden Streamlit buttons (JS click targets) ────────
-        # These MUST come before the role switcher. CSS hides them via the #sw-hb-zone marker.
-        st.markdown('<div id="sw-hb-zone"></div>', unsafe_allow_html=True)
-
-        for page in _ALL_PAGES:
-            if st.button(f"{_P}n:{page}", key=f"_nb_{page}"):
-                set_page(page)
-                st.rerun()
-
-        for sec in _ALL_SECTIONS:
-            if st.button(f"{_P}s:{sec}", key=f"_ns_{sec}"):
-                sk = f"sb_{sec}"
-                st.session_state[sk] = not st.session_state.get(sk, sec in _DEFAULT_OPEN)
-                st.rerun()
-
         # ── Role switcher ─────────────────────────────────────────────────
         st.markdown(
             '<div style="margin:8px 6px 0;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)"></div>',
@@ -340,3 +325,19 @@ def render_sidebar():
             'Sterling Reports v1.0</div>',
             unsafe_allow_html=True,
         )
+
+        # ── Off-screen hidden Streamlit buttons (JS click targets) ────────
+        # MUST come last — CSS hides them via the #sw-hb-zone marker.
+        # Everything after #sw-hb-zone gets height:0 + pointer-events:none.
+        st.markdown('<div id="sw-hb-zone"></div>', unsafe_allow_html=True)
+
+        for page in _ALL_PAGES:
+            if st.button(f"{_P}n:{page}", key=f"_nb_{page}"):
+                set_page(page)
+                st.rerun()
+
+        for sec in _ALL_SECTIONS:
+            if st.button(f"{_P}s:{sec}", key=f"_ns_{sec}"):
+                sk = f"sb_{sec}"
+                st.session_state[sk] = not st.session_state.get(sk, sec in _DEFAULT_OPEN)
+                st.rerun()
