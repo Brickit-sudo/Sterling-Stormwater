@@ -150,35 +150,90 @@ def render():
 """, unsafe_allow_html=True)
 
     # ── 4. Streamlit form (native widgets, styled by global CSS) ─────────────
-    with st.form("login_form", border=False):
-        email    = st.text_input("Email",    placeholder="you@sterlingstormwater.com")
-        password = st.text_input("Password", type="password", placeholder="••••••••")
-        submit   = st.form_submit_button(
-            "Sign In  →", type="primary", use_container_width=True
-        )
+    mode = st.session_state.get("login_mode", "signin")
 
-    if submit:
-        if not email or not password:
-            st.error("Enter your email and password.")
-            return
-        with st.spinner("Signing in…"):
-            result = login(email, password)
-        if result and result.get("access_token"):
-            st.session_state["token"]        = result["access_token"]
-            st.session_state["current_user"] = result["user"]
-            st.rerun()
-        else:
-            # Backend unavailable or credentials wrong — try local auth
-            from app.services.db import local_login
-            if local_login(email, password):
-                st.session_state["token"]        = "local"
-                st.session_state["current_user"] = {
-                    "email": email,
-                    "name":  email.split("@")[0].replace(".", " ").title(),
-                }
+    if mode == "signin":
+        with st.form("login_form", border=False):
+            email    = st.text_input("Email",    placeholder="you@sterlingstormwater.com")
+            password = st.text_input("Password", type="password", placeholder="••••••••")
+            submit   = st.form_submit_button(
+                "Sign In  →", type="primary", use_container_width=True
+            )
+
+        if submit:
+            if not email or not password:
+                st.error("Enter your email and password.")
+                return
+            with st.spinner("Signing in…"):
+                result = login(email, password)
+            if result and result.get("access_token"):
+                st.session_state["token"]        = result["access_token"]
+                st.session_state["current_user"] = result["user"]
                 st.rerun()
             else:
-                st.error("Invalid email or password.")
+                from app.services.db import local_login
+                if local_login(email, password):
+                    st.session_state["token"]        = "local"
+                    st.session_state["current_user"] = {
+                        "email": email,
+                        "name":  email.split("@")[0].replace(".", " ").title(),
+                    }
+                    st.rerun()
+                else:
+                    st.error("Invalid email or password.")
+
+        st.markdown(
+            '<div style="text-align:center;margin-top:10px">',
+            unsafe_allow_html=True,
+        )
+        if st.button("Forgot password?", key="goto_reset",
+                     help="Reset your local password"):
+            st.session_state["login_mode"] = "reset"
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    elif mode == "reset":
+        st.markdown(
+            '<div style="text-align:center;color:#9699a6;font-size:13px;'
+            'margin-bottom:12px">Enter your email and choose a new password.</div>',
+            unsafe_allow_html=True,
+        )
+        with st.form("reset_form", border=False):
+            r_email    = st.text_input("Email", placeholder="you@sterlingstormwater.com")
+            r_pw1      = st.text_input("New password",     type="password", placeholder="••••••••")
+            r_pw2      = st.text_input("Confirm password", type="password", placeholder="••••••••")
+            r_submit   = st.form_submit_button(
+                "Reset Password", type="primary", use_container_width=True
+            )
+
+        if r_submit:
+            from app.services.db import set_local_password, get_conn
+            if not r_email or not r_pw1:
+                st.error("Email and new password are required.")
+            elif r_pw1 != r_pw2:
+                st.error("Passwords don't match.")
+            elif len(r_pw1) < 8:
+                st.error("Password must be at least 8 characters.")
+            else:
+                # Verify email exists
+                try:
+                    c = get_conn()
+                    row = c.execute(
+                        "SELECT email FROM local_users WHERE email=?", (r_email,)
+                    ).fetchone()
+                except Exception:
+                    row = None
+                if not row:
+                    st.error("No account found for that email.")
+                else:
+                    set_local_password(r_email, r_pw1)
+                    st.success("Password updated. You can now sign in.")
+                    st.session_state["login_mode"] = "signin"
+                    st.rerun()
+
+        if st.button("← Back to sign in", key="back_to_signin"):
+            st.session_state["login_mode"] = "signin"
+            st.rerun()
 
     # ── 5. Footer ─────────────────────────────────────────────────────────────
     st.markdown(

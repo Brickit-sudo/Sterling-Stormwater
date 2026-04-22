@@ -130,6 +130,8 @@ def init_session():
         st.session_state.photo_bytes = {}   # photo_id -> bytes (for display only)
     # Remove legacy app_mode — routing is now sidebar-driven via current_page
     st.session_state.pop("app_mode", None)
+    if "user_role" not in st.session_state:
+        st.session_state.user_role = "ops"
 
     # Photosheet state (ps_ prefix to avoid collisions)
     if "ps_step" not in st.session_state:

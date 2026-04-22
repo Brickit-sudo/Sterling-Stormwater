@@ -391,15 +391,37 @@ def render():
                     st.balloons()
 
                     docx_bytes = Path(output_path).read_bytes()
-                    st.download_button(
-                        label="Download Report",
+                    dl_col, drive_col = st.columns(2)
+                    dl_col.download_button(
+                        label="⬇️ Download Report",
                         data=docx_bytes,
                         file_name=Path(output_path).name,
                         mime=(
                             "application/vnd.openxmlformats-officedocument"
                             ".wordprocessingml.document"
                         ),
+                        use_container_width=True,
                     )
+                    with drive_col:
+                        if st.button("📁 Save to Google Drive", use_container_width=True,
+                                     key="save_drive_export"):
+                            try:
+                                from app.services.google_service import (
+                                    upload_to_drive, load_config, is_configured
+                                )
+                                if not is_configured():
+                                    st.warning("Google Drive not configured. Go to Settings → Google Integration.")
+                                else:
+                                    cfg = load_config()
+                                    folder_id = cfg.get("drive_reports_folder", "")
+                                    if not folder_id:
+                                        st.warning("No Drive folder configured. Set it in Settings → Google Integration.")
+                                    else:
+                                        with st.spinner("Uploading to Drive..."):
+                                            result = upload_to_drive(output_path, folder_id)
+                                        st.success(f"[Open in Drive ↗]({result.get('webViewLink', '')})")
+                            except Exception as drive_err:
+                                st.error(f"Drive upload failed: {drive_err}")
                 except Exception as e:
                     st.error(f"Export failed: {e}")
                     st.exception(e)

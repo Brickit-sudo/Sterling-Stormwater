@@ -534,3 +534,63 @@ def get_monthly_revenue() -> list[dict]:
     """).fetchall()
     data = {r["scheduled_month"]: dict(r) for r in rows}
     return [data[m] for m in _ORDER if m in data]
+
+
+# ── Geocoding ─────────────────────────────────────────────────────────────────
+
+def _ensure_geo_columns() -> None:
+    c = get_conn()
+    for col in ("lat", "lng"):
+        try:
+            c.execute(f"ALTER TABLE crm_sites ADD COLUMN {col} REAL")
+            c.commit()
+        except Exception:
+            pass
+
+
+def geocode_sites() -> int:
+    """Populate lat/lng for sites with a zip but no coordinates. Returns count updated."""
+    _ensure_geo_columns()
+    c = get_conn()
+    rows = c.execute(
+        "SELECT site_id, zip FROM crm_sites WHERE lat IS NULL AND zip IS NOT NULL AND zip != ''"
+    ).fetchall()
+    if not rows:
+        return 0
+    try:
+        import pgeocode
+        import pandas as pd
+        nomi = pgeocode.Nominatim("US")
+    except ImportError:
+        return 0
+
+    zip_to_sites: dict[str, list[str]] = {}
+    for r in rows:
+        zp = (r["zip"] or "").strip()[:5]
+        if zp:
+            zip_to_sites.setdefault(zp, []).append(r["site_id"])
+
+    updated = 0
+    for zp, site_ids in zip_to_sites.items():
+        try:
+            res = nomi.query_postal_code(zp)
+            lat = float(res.latitude)
+            lng = float(res.longitude)
+            if pd.notna(lat) and pd.notna(lng):
+                for sid in site_ids:
+                    c.execute("UPDATE crm_sites SET lat=?, lng=? WHERE site_id=?",
+                              (lat, lng, sid))
+                    updated += 1
+        except Exception:
+            continue
+    c.commit()
+    return updated
+
+
+def get_sites_with_coords() -> list[dict]:
+    _ensure_geo_columns()
+    c = get_conn()
+    return [dict(r) for r in c.execute(
+        "SELECT site_id, name, city, state, status, managed_by, budget, "
+        "submittal_due_date, lat, lng FROM crm_sites WHERE lat IS NOT NULL AND lng IS NOT NULL"
+    ).fetchall()]

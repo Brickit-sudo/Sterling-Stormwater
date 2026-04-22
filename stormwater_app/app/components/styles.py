@@ -532,7 +532,7 @@ button[data-testid^="stBaseButton"]:disabled {
 [data-testid="stSidebar"] strong, [data-testid="stSidebar"] b { color: var(--text-primary) !important; }
 [data-testid="stSidebar"] hr { border-color: var(--border-subtle) !important; margin: 5px 0 !important; }
 
-/* Sidebar nav buttons — compact 32px rows */
+/* Sidebar nav buttons — compact 32px rows, left-aligned */
 [data-testid="stSidebar"] .stButton > button {
   background: transparent !important;
   border: none !important;
@@ -545,11 +545,48 @@ button[data-testid^="stBaseButton"]:disabled {
   padding: 5px 10px !important;
   height: 32px !important;
   min-height: 32px !important;
-  transition: all var(--motion-fast) var(--ease-out) !important;
+  transition: background var(--motion-fast) var(--ease-out),
+              color var(--motion-fast) var(--ease-out) !important;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
   background: var(--bg-overlay) !important;
   color: var(--text-primary) !important;
+}
+
+/* ── Active nav item: marker div → sibling button highlight ── */
+[data-testid="stSidebar"] div:has(.sw-nav.sw-active) + div .stButton > button {
+  background: rgba(26,183,56,0.16) !important;
+  color: var(--text-primary) !important;
+  font-weight: 500 !important;
+}
+
+/* ── Section header buttons — slightly heavier, spaced top ── */
+[data-testid="stSidebar"] div:has(.sw-sec) + div .stButton > button {
+  color: var(--text-secondary) !important;
+  font-weight: 500 !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  margin-top: 2px !important;
+}
+
+/* ── Indented sub-items ── */
+[data-testid="stSidebar"] div:has(.sw-i1) + div .stButton > button {
+  padding-left: 22px !important;
+}
+[data-testid="stSidebar"] div:has(.sw-i2) + div .stButton > button {
+  padding-left: 36px !important;
+  font-size: 12px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+}
+
+/* Active + indented combinations */
+[data-testid="stSidebar"] div:has(.sw-nav.sw-active.sw-i1) + div .stButton > button {
+  padding-left: 22px !important;
+}
+[data-testid="stSidebar"] div:has(.sw-nav.sw-active.sw-i2) + div .stButton > button {
+  padding-left: 36px !important;
+  font-size: 12px !important;
 }
 
 /* Primary buttons in sidebar (Save) */

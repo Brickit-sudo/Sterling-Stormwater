@@ -105,6 +105,8 @@ PAGE_MAP = {
     "crm_quotes":       lambda: __import__("app.pages.page_crm_quotes",         fromlist=["render"]).render(),
     "crm_svc_catalog":  lambda: __import__("app.pages.page_crm_service_catalog",fromlist=["render"]).render(),
     "crm_comms":        lambda: __import__("app.pages.page_crm_comms",          fromlist=["render"]).render(),
+    "calendar":         lambda: __import__("app.pages.page_calendar",           fromlist=["render"]).render(),
+    "google_settings":  lambda: __import__("app.pages.page_google_settings",    fromlist=["render"]).render(),
 }
 
 PAGE_MAP.get(current_page, PAGE_MAP["home"])()
