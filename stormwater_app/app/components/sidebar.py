@@ -1,11 +1,10 @@
 """
 app/components/sidebar.py
-Sterling Stormwater — monday.com-style sidebar.
+Sterling Stormwater sidebar — real st.button() per nav item (guaranteed reliable).
 
-Nav is one HTML block (CSS+JS only — zero per-item Streamlit element overhead).
-Click routing: each nav item has an inline self-contained onclick that queries the
-sidebar DOM directly for the hidden off-screen Streamlit button and calls .click().
-No cross-iframe communication; no timing dependency.
+The onclick-HTML-proxy approach was unreliable across Streamlit versions.
+This version uses native Streamlit widgets styled with CSS — the approach
+that was confirmed working before role-based changes were introduced.
 """
 
 from pathlib import Path
@@ -15,14 +14,17 @@ from app.session import get_session, set_page, get_project, save_project_json
 LOGO_PATH = Path("assets/sterling_logo.png")
 
 _FULLREPORT_PAGES = {"setup", "systems", "writeups", "export"}
+
 _SECTION_PAGES = {
-    "crm":      {"crm_sites", "crm_clients", "crm_leads", "crm_prospects", "crm_jobs", "crm_comms", "calendar"},
+    "crm":      {"crm_sites", "crm_clients", "crm_leads", "crm_prospects",
+                 "crm_jobs", "crm_comms", "calendar"},
     "finance":  {"crm_invoices", "crm_quotes", "crm_svc_catalog"},
     "reports":  {"photosheet", "setup", "systems", "writeups", "export"},
     "archive":  {"crm_files", "library", "bulk_import", "crm_import"},
     "insights": {"trends", "knowledge_base"},
     "settings": {"google_settings"},
 }
+
 _DEFAULT_OPEN = {"reports"}
 
 # Sections visible per role (None = all)
@@ -40,177 +42,97 @@ _ROLE_LABELS = {
     "worker":     "Worker / Field Tech",
 }
 
-# All navigable pages
-_ALL_PAGES = [
-    "home", "map",
-    "crm_sites", "crm_clients", "crm_leads", "crm_prospects", "crm_jobs", "crm_comms", "calendar",
-    "google_settings",
-    "crm_invoices", "crm_quotes", "crm_svc_catalog",
-    "photosheet", "setup", "systems", "writeups", "export",
-    "crm_files", "library", "bulk_import", "crm_import",
-    "trends", "knowledge_base",
-]
-_ALL_SECTIONS = ["crm", "finance", "reports", "archive", "insights", "settings"]
 
-# Prefix for hidden nav button labels — plain ASCII, never stripped by markdown
-_N = "__sw_n_"   # page nav buttons
-_S = "__sw_s_"   # section toggle buttons
+# ── Sub-components ────────────────────────────────────────────────────────────
 
-
-# ── Nav HTML + CSS ────────────────────────────────────────────────────────────
-
-_NAV_CSS = """<style>
-.sw{font-family:'Figtree',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-    padding:2px 6px 10px;-webkit-font-smoothing:antialiased}
-.sw-row{display:flex;align-items:center;gap:8px;padding:0 8px;height:32px;
-    border-radius:6px;cursor:pointer;font-size:13px;color:#9699a6;
-    transition:background 100ms,color 100ms;user-select:none;
-    white-space:nowrap;overflow:hidden;margin:1px 0}
-.sw-row:hover{background:#363a52;color:#d5d8df}
-.sw-row.on{background:rgba(26,183,56,0.18);color:#d5d8df;font-weight:500}
-.sw-row.sec{font-weight:500;margin:4px 0 1px;height:34px}
-.sw-row.i1{padding-left:20px}
-.sw-row.i2{padding-left:32px;font-size:12px;height:28px}
-.sw-chev{font-size:11px;width:12px;flex-shrink:0}
-.sw-ico{font-size:14px;flex-shrink:0;line-height:1}
-.sw-body.shut{display:none}.sw-body.open{display:block}
-.sw-grp{font-size:10px;font-weight:600;text-transform:uppercase;
-    letter-spacing:.1em;color:#4b4e69;padding:6px 8px 2px 32px;user-select:none}
-</style>"""
-
-
-def _js_click(btn_label: str) -> str:
-    """Self-contained onclick: finds a hidden sidebar button by innerText and clicks it.
-    Uses innerText (not textContent/querySelector('p')) — works across all Streamlit versions.
-    pointer-events:none is NOT set on target buttons so .click() dispatches correctly."""
-    return (
-        "var _b=document.querySelectorAll('[data-testid=&quot;stSidebar&quot;] button');"
-        f"for(var _i=0;_i<_b.length;_i++){{"
-        f"if((_b[_i].innerText||_b[_i].textContent).trim()==='{btn_label}')"
-        f"{{_b[_i].click();return;}}}}"
+def _sub_label(text: str) -> None:
+    st.markdown(
+        f'<div style="font-size:10px;color:#4b4e69;padding:6px 4px 1px 8px;'
+        f'font-weight:600;letter-spacing:0.09em;text-transform:uppercase'
+        f';user-select:none">{text}</div>',
+        unsafe_allow_html=True,
     )
 
 
-def _row(page: str, icon: str, label: str, current: str, indent: int = 0) -> str:
-    cls = "sw-row on" if current == page else "sw-row"
-    if indent:
-        cls += f" i{indent}"
-    return (f'<div class="{cls}" onclick="{_js_click(_N + page)}">'
-            f'<span class="sw-ico">{icon}</span><span>{label}</span></div>')
-
-
-def _sec(key: str, icon: str, label: str, body: str, open_set: set) -> str:
-    is_open = key in open_set
-    chev = "▾" if is_open else "▸"
-    cls = "sw-body open" if is_open else "sw-body shut"
-    return (
-        f'<div class="sw-row sec" onclick="{_js_click(_S + key)}">'
-        f'<span class="sw-chev">{chev}</span>'
-        f'<span class="sw-ico">{icon}</span><span>{label}</span></div>'
-        f'<div class="{cls}">{body}</div>'
+def _nav_rule() -> None:
+    st.markdown(
+        '<div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0"></div>',
+        unsafe_allow_html=True,
     )
 
 
-def _grp(text: str) -> str:
-    return f'<div class="sw-grp">{text}</div>'
-
-
-def _build_nav(current: str, open_set: set, allowed: set | None = None) -> str:
-    def _allow(sec: str) -> bool:
-        return allowed is None or sec in allowed
-
-    crm_items = _row("calendar", "📅", "Calendar", current, 1)
-    if _allow("crm"):
-        crm_items += (
-            _row("crm_sites",     "🗄️", "Sites",          current, 1) +
-            _row("crm_clients",   "👤", "Clients",        current, 1) +
-            _row("crm_leads",     "🎯", "Leads",          current, 1) +
-            _row("crm_prospects", "📋", "Prospects",      current, 1) +
-            _row("crm_comms",     "💬", "Communications", current, 1)
+def _nav_item(page_key: str, icon: str, label: str, current: str) -> None:
+    is_active = current == page_key
+    if is_active:
+        st.markdown(
+            '<div style="'
+            'background:linear-gradient(90deg,rgba(26,183,56,0.18) 0%,rgba(26,183,56,0.05) 100%);'
+            'border-left:3px solid #1AB738;'
+            'border-radius:0 6px 6px 0;margin:1px 2px 1px 0">',
+            unsafe_allow_html=True,
         )
-    crm_items += _row("crm_jobs", "🔧", "Jobs", current, 1)
+    if st.button(f"{icon}  {label}", key=f"nav_{page_key}", use_container_width=True):
+        set_page(page_key)
+        st.rerun()
+    if is_active:
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    finance = (
-        _row("crm_invoices",    "🧾", "Invoices",        current, 1) +
-        _row("crm_quotes",      "💰", "Quote Builder",   current, 1) +
-        _row("crm_svc_catalog", "🔧", "Service Catalog", current, 1)
+
+def _section_header(section_key: str, icon: str, label: str, current: str) -> bool:
+    """Render a collapsible section header. Returns True if expanded."""
+    state_key = f"sidebar_{section_key}_open"
+
+    contains_current = current in _SECTION_PAGES.get(section_key, set())
+    if contains_current and not st.session_state.get(state_key, False):
+        st.session_state[state_key] = True
+
+    is_open = st.session_state.get(state_key, section_key in _DEFAULT_OPEN)
+    chevron = "▼" if is_open else "▶"
+    bg      = "rgba(26,183,56,0.08)" if is_open else "rgba(255,255,255,0.04)"
+    border  = "#1AB738" if is_open else "transparent"
+    color   = "#d5d8df" if is_open else "#9699a6"
+
+    st.markdown(
+        f'<div class="sidebar-section-{section_key}" style="'
+        f'background:{bg};border-left:3px solid {border};'
+        f'border-radius:0 6px 6px 0;margin:2px 2px 2px 0">',
+        unsafe_allow_html=True,
     )
-    reports = (
-        _row("photosheet", "📷", "Photosheet", current, 1) +
-        _grp("Full Report") +
-        _row("setup",    "⚙️",  "Setup",     current, 2) +
-        _row("systems",  "🔧",  "Systems",   current, 2) +
-        _row("writeups", "✏️",  "Write-Ups", current, 2) +
-        _row("export",   "📤",  "Export",    current, 2)
+    st.markdown(
+        f'<style>'
+        f'.sidebar-section-{section_key} + div button {{'
+        f'text-align:left !important;font-weight:600 !important;'
+        f'color:{color} !important;background:transparent !important;'
+        f'border:none !important;}}'
+        f'</style>',
+        unsafe_allow_html=True,
     )
-    archive = (
-        _row("crm_files",   "📁", "File Archive",   current, 1) +
-        _row("library",     "📚", "Report Library", current, 1) +
-        _row("bulk_import", "📥", "Bulk Import",    current, 1) +
-        _row("crm_import",  "📥", "Import Data",    current, 1)
-    )
-    insights = (
-        _row("trends",         "📈", "Site History",   current, 1) +
-        _row("knowledge_base", "📊", "Knowledge Base", current, 1)
-    )
-    settings = (
-        _row("google_settings", "🔗", "Google Integration", current, 1)
-    )
+    if st.button(f"{chevron}  {icon}  {label}", key=f"section_toggle_{section_key}",
+                 use_container_width=True):
+        st.session_state[state_key] = not is_open
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    body = _row("home", "🏠", "Home", current)
-    body += _row("map", "🗺️", "Site Map", current)
-    body += _row("photosheet", "📷", "Photosheet", current) if (allowed is not None and not _allow("reports")) else ""
-    if _allow("crm"):
-        body += _sec("crm", "👥", "CRM", crm_items, open_set)
-    if _allow("finance"):
-        body += _sec("finance", "💰", "Finance", finance, open_set)
-    if _allow("reports"):
-        body += _sec("reports", "📊", "Reports", reports, open_set)
-    if _allow("archive"):
-        body += _sec("archive", "📁", "Archive", archive, open_set)
-    if _allow("insights"):
-        body += _sec("insights", "📈", "Insights", insights, open_set)
-    if _allow("settings"):
-        body += _sec("settings", "⚙️", "Settings", settings, open_set)
+    return is_open
 
-    return f'{_NAV_CSS}<div class="sw">{body}</div>'
-
-
-# ── Sidebar chrome CSS ────────────────────────────────────────────────────────
-
-_CHROME_CSS = """<style>
-[data-testid="stSidebar"] .stVerticalBlock{gap:0!important}
-[data-testid="stSidebar"] [data-testid="stElementContainer"],
-[data-testid="stSidebar"] .element-container{
-  margin-top:0!important;margin-bottom:0!important}
-/* Hide hidden nav button zone — off-screen, pointer-events MUST remain auto for .click() */
-[data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div .stButton>button,
-[data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div [data-testid*="Button"]{
-  position:fixed!important;left:-9999px!important;top:-9999px!important;
-  width:1px!important;height:1px!important;opacity:0!important;overflow:hidden!important}
-[data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div .stButton{
-  margin:0!important;padding:0!important;height:0!important;overflow:hidden!important}
-[data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div{
-  margin:0!important;padding:0!important;height:0!important;overflow:hidden!important}
-</style>"""
-
-
-# ── Site chip ─────────────────────────────────────────────────────────────────
 
 def _site_chip(meta) -> None:
     site   = meta.site_name   or "New Project"
     client = meta.client_name or ""
     rtype  = meta.report_type or "Inspection"
-    extra  = (f'<div style="font-size:11px;color:#9699a6;margin-top:1px">{client}</div>'
-              if client else "")
+    client_row = (
+        f'<div style="font-size:11px;color:#9699a6;margin-top:1px">{client}</div>'
+        if client else ""
+    )
     st.markdown(
-        '<div style="margin:4px 6px 6px;padding:8px 10px;background:rgba(255,255,255,0.04);'
-        'border-radius:6px;border:1px solid rgba(255,255,255,0.07)">'
-        '<div style="font-size:10px;color:#4b4e69;font-weight:600;text-transform:uppercase;'
-        'letter-spacing:.08em;margin-bottom:2px">Active Project</div>'
-        f'<div style="font-size:13px;font-weight:600;color:#d5d8df;white-space:nowrap;'
-        f'overflow:hidden;text-overflow:ellipsis">{site}</div>'
-        f'{extra}'
+        '<div style="margin:2px 6px 6px 6px;padding:8px 10px;'
+        'background:rgba(255,255,255,0.04);border-radius:6px;'
+        'border:1px solid rgba(255,255,255,0.07)">'
+        '<div style="font-size:10px;color:#6e6f8f;font-weight:600;'
+        'text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Active Project</div>'
+        f'<div style="font-size:13px;font-weight:600;color:#d5d8df;'
+        f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{site}</div>'
+        f'{client_row}'
         f'<div style="font-size:11px;color:#6e6f8f;margin-top:2px">{rtype}</div>'
         '</div>',
         unsafe_allow_html=True,
@@ -222,30 +144,23 @@ def _site_chip(meta) -> None:
 def render_sidebar():
     if st.session_state.get("sidebar_hidden"):
         st.markdown(
-            "<style>[data-testid='stSidebar']{transform:translateX(-230px)!important;"
-            "width:0!important;min-width:0!important;overflow:hidden!important;"
-            "border-right:none!important}"
+            "<style>[data-testid='stSidebar']{"
+            "transform:translateX(-230px)!important;"
+            "width:0!important;min-width:0!important;"
+            "overflow:hidden!important;border-right:none!important}"
             "[data-testid='stMain']{margin-left:0!important}</style>",
             unsafe_allow_html=True,
         )
 
     with st.sidebar:
-        st.markdown(_CHROME_CSS, unsafe_allow_html=True)
-
         proj    = get_project()
         meta    = proj.meta
         current = get_session("current_page", "home")
-
-        # Auto-expand section containing active page
-        for sec_key, pages in _SECTION_PAGES.items():
-            if current in pages:
-                st.session_state.setdefault(f"sb_{sec_key}", True)
-
-        open_set = {k for k in _ALL_SECTIONS
-                    if st.session_state.get(f"sb_{k}", k in _DEFAULT_OPEN)}
-
-        role = st.session_state.get("user_role", "ops")
+        role    = st.session_state.get("user_role", "ops")
         allowed = _ROLE_SECTIONS.get(role)   # None = all sections visible
+
+        def _allow(sec: str) -> bool:
+            return allowed is None or sec in allowed
 
         # ── Logo + collapse ───────────────────────────────────────────────
         c_logo, c_btn = st.columns([4, 1])
@@ -257,14 +172,56 @@ def render_sidebar():
                 st.session_state["sidebar_hidden"] = True
                 st.rerun()
 
-        # ── Nav HTML (one markdown block, no per-item widgets) ────────────
-        st.markdown(_build_nav(current, open_set, allowed), unsafe_allow_html=True)
+        _nav_rule()
+        _nav_item("home", "🏠", "Home", current)
+        _nav_item("map",  "🗺️", "Site Map", current)
+        _nav_rule()
 
-        # ── Active project chip + Save/New (full report only) ─────────────
+        # ── CRM ───────────────────────────────────────────────────────────
+        if _allow("crm") and _section_header("crm", "👥", "CRM", current):
+            _nav_item("calendar",      "📅", "Calendar",       current)
+            _nav_item("crm_sites",     "🗄️", "Sites",          current)
+            _nav_item("crm_clients",   "👤", "Clients",        current)
+            _nav_item("crm_leads",     "🎯", "Leads",          current)
+            _nav_item("crm_prospects", "📋", "Prospects",      current)
+            _nav_item("crm_jobs",      "🔧", "Jobs",           current)
+            _nav_item("crm_comms",     "💬", "Communications", current)
+
+        # ── Finance ───────────────────────────────────────────────────────
+        if _allow("finance") and _section_header("finance", "💰", "Finance", current):
+            _nav_item("crm_invoices",    "🧾", "Invoices",        current)
+            _nav_item("crm_quotes",      "💰", "Quote Builder",   current)
+            _nav_item("crm_svc_catalog", "🔧", "Service Catalog", current)
+
+        # ── Reports ───────────────────────────────────────────────────────
+        if _allow("reports") and _section_header("reports", "📊", "Reports", current):
+            _nav_item("photosheet", "📷", "Photosheet", current)
+            _sub_label("Full Report")
+            _nav_item("setup",    "⚙️",  "Setup",     current)
+            _nav_item("systems",  "🔧",  "Systems",   current)
+            _nav_item("writeups", "✏️",  "Write-Ups", current)
+            _nav_item("export",   "📤",  "Export",    current)
+
+        # ── Archive ───────────────────────────────────────────────────────
+        if _allow("archive") and _section_header("archive", "📁", "Archive", current):
+            _nav_item("crm_files",   "📁", "File Archive",   current)
+            _nav_item("library",     "📚", "Report Library", current)
+            _nav_item("bulk_import", "📥", "Bulk Import",    current)
+            _nav_item("crm_import",  "📥", "Import Data",    current)
+
+        # ── Insights ──────────────────────────────────────────────────────
+        if _allow("insights") and _section_header("insights", "📈", "Insights", current):
+            _nav_item("trends",         "📈", "Site History",   current)
+            _nav_item("knowledge_base", "📊", "Knowledge Base", current)
+
+        # ── Settings ──────────────────────────────────────────────────────
+        if _allow("settings") and _section_header("settings", "⚙️", "Settings", current):
+            _nav_item("google_settings", "🔗", "Google Integration", current)
+
+        # ── Active project chip + Save/New (full report pages only) ───────
         if current in _FULLREPORT_PAGES:
             _site_chip(meta)
-            st.markdown('<hr style="border-color:rgba(255,255,255,0.06);margin:6px 0">',
-                        unsafe_allow_html=True)
+            _nav_rule()
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("💾  Save", use_container_width=True, type="primary"):
@@ -283,19 +240,15 @@ def render_sidebar():
                     set_page("setup")
                     st.rerun()
 
-        # ── Role indicator / admin-only switcher ──────────────────────────
-        st.markdown(
-            '<div style="margin:8px 6px 0;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)"></div>',
-            unsafe_allow_html=True,
-        )
+        _nav_rule()
+
+        # ── Role indicator (owner-only switcher) ──────────────────────────
         if role == "owner":
-            # Owners can switch roles for testing/impersonation
             role_options = list(_ROLE_LABELS.keys())
-            role_idx = role_options.index(role) if role in role_options else 0
             new_role = st.selectbox(
                 "View as",
                 options=role_options,
-                index=role_idx,
+                index=role_options.index(role),
                 format_func=lambda r: _ROLE_LABELS[r],
                 key="role_switcher_select",
                 label_visibility="collapsed",
@@ -304,31 +257,15 @@ def render_sidebar():
                 st.session_state.user_role = new_role
                 st.rerun()
         else:
-            # Non-owners see their role as read-only
             st.markdown(
-                f'<div style="font-size:11px;color:#6e6f8f;text-align:center;padding:2px 0">'
-                f'{_ROLE_LABELS.get(role, role)}</div>',
+                f'<div style="font-size:11px;color:#6e6f8f;text-align:center;'
+                f'padding:2px 0">{_ROLE_LABELS.get(role, role)}</div>',
                 unsafe_allow_html=True,
             )
 
         st.markdown(
             '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
-            'color:#4b4e69;text-align:center;padding:6px 0 6px;letter-spacing:.06em">'
+            'color:#4b4e69;text-align:center;padding:6px 0 4px;letter-spacing:.06em">'
             'Sterling Reports v1.0</div>',
             unsafe_allow_html=True,
         )
-
-        # ── Off-screen hidden Streamlit buttons (JS click targets) ────────
-        # Must be last. CSS moves them off-screen; pointer-events stays auto so .click() works.
-        st.markdown('<div id="sw-hb-zone"></div>', unsafe_allow_html=True)
-
-        for page in _ALL_PAGES:
-            if st.button(f"{_N}{page}", key=f"_nb_{page}"):
-                set_page(page)
-                st.rerun()
-
-        for sec in _ALL_SECTIONS:
-            if st.button(f"{_S}{sec}", key=f"_ns_{sec}"):
-                sk = f"sb_{sec}"
-                st.session_state[sk] = not st.session_state.get(sk, sec in _DEFAULT_OPEN)
-                st.rerun()
