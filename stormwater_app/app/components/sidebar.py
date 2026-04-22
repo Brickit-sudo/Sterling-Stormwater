@@ -172,8 +172,7 @@ _COMM_JS = f"""<script>
   var par = window.parent;
   var P = '{_P}';
   function click(txt) {{
-    var btns = par.document.querySelectorAll(
-      '[data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"]');
+    var btns = par.document.querySelectorAll('[data-testid="stSidebar"] button');
     for (var i = 0; i < btns.length; i++) {{
       var p = btns[i].querySelector('p');
       if (p && p.textContent === txt) {{ btns[i].click(); return; }}

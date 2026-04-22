@@ -108,11 +108,10 @@ html, body {
 ═══════════════════════════════════════════════════════════════════════════ */
 .block-container,
 [data-testid="stMainBlockContainer"] {
-  max-width: 1400px !important;
-  margin: 0 auto !important;
+  max-width: 100% !important;
   padding-top: calc(var(--content-offset) + 20px) !important;
-  padding-left: 1.25rem !important;
-  padding-right: 1.25rem !important;
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
   padding-bottom: 2rem !important;
 }
 
