@@ -475,6 +475,9 @@ button[data-testid^="stBaseButton"]:disabled {
 [data-testid="stSidebarContent"] {
   background: var(--bg-surface) !important;
 }
+[data-testid="stSidebarContent"] {
+  padding: 0.75rem 0.25rem !important;
+}
 [data-testid="stSidebar"] > div:first-child {
   width: var(--sidebar-width) !important;
   min-width: var(--sidebar-width) !important;
@@ -521,7 +524,7 @@ button[data-testid^="stBaseButton"]:disabled {
   justify-content: flex-start !important;
   font-size: 13px !important;
   font-weight: 400 !important;
-  padding: 7px 10px !important;
+  padding: 7px 8px 7px 6px !important;
   height: 36px !important;
   min-height: 36px !important;
   transition: background var(--motion-fast) var(--ease-out),
