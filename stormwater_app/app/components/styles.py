@@ -91,7 +91,16 @@ html, body {
 
 [data-testid="stMain"] {
   margin-left: var(--sidebar-width) !important;
+  width: calc(100vw - var(--sidebar-width)) !important;
+  max-width: calc(100vw - var(--sidebar-width)) !important;
+  overflow-x: hidden !important;
   transition: margin-left 200ms ease !important;
+}
+.stApp,
+[data-testid="stAppViewContainer"] {
+  overflow-x: hidden !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
