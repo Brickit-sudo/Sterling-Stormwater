@@ -197,7 +197,7 @@ def render():
     _render_roles()
 
 
-def _render_map_dashboard():
+def render_map():
     # ── Fetch data ────────────────────────────────────────────────────────────
     stats = {}; jobs_by_status = []; recent_jobs = []; monthly_rev = []
     sites_with_coords: list[dict] = []

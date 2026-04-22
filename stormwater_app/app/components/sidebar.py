@@ -28,9 +28,9 @@ _DEFAULT_OPEN = {"reports"}
 # Sections visible per role (None = all)
 _ROLE_SECTIONS: dict[str, set | None] = {
     "owner":      None,
-    "ops":        {"crm", "reports", "settings"},
+    "ops":        {"crm", "reports", "archive", "settings"},
     "compliance": {"crm", "reports", "archive", "insights", "settings"},
-    "worker":     set(),   # home + photosheet only (no sections)
+    "worker":     {"reports"},
 }
 
 _ROLE_LABELS = {
@@ -42,7 +42,7 @@ _ROLE_LABELS = {
 
 # All navigable pages
 _ALL_PAGES = [
-    "home",
+    "home", "map",
     "crm_sites", "crm_clients", "crm_leads", "crm_prospects", "crm_jobs", "crm_comms", "calendar",
     "google_settings",
     "crm_invoices", "crm_quotes", "crm_svc_catalog",
@@ -145,6 +145,7 @@ def _build_nav(current: str, open_set: set, allowed: set | None = None) -> str:
     )
 
     body = _row("home", "🏠", "Home", current)
+    body += _row("map", "🗺️", "Site Map", current)
     body += _row("photosheet", "📷", "Photosheet", current) if (allowed is not None and not _allow("reports")) else ""
     if _allow("crm"):
         body += _sec("crm", "👥", "CRM", crm_items, open_set)
@@ -299,6 +300,21 @@ def render_sidebar():
                     set_page("setup")
                     st.rerun()
 
+        # ── Off-screen hidden Streamlit buttons (JS click targets) ────────
+        # These MUST come before the role switcher. CSS hides them via the #sw-hb-zone marker.
+        st.markdown('<div id="sw-hb-zone"></div>', unsafe_allow_html=True)
+
+        for page in _ALL_PAGES:
+            if st.button(f"{_P}n:{page}", key=f"_nb_{page}"):
+                set_page(page)
+                st.rerun()
+
+        for sec in _ALL_SECTIONS:
+            if st.button(f"{_P}s:{sec}", key=f"_ns_{sec}"):
+                sk = f"sb_{sec}"
+                st.session_state[sk] = not st.session_state.get(sk, sec in _DEFAULT_OPEN)
+                st.rerun()
+
         # ── Role switcher ─────────────────────────────────────────────────
         st.markdown(
             '<div style="margin:8px 6px 0;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)"></div>',
@@ -324,18 +340,3 @@ def render_sidebar():
             'Sterling Reports v1.0</div>',
             unsafe_allow_html=True,
         )
-
-        # ── Off-screen hidden Streamlit buttons (JS click targets) ────────
-        # These MUST come last. CSS hides them via the #sw-hb-zone marker.
-        st.markdown('<div id="sw-hb-zone"></div>', unsafe_allow_html=True)
-
-        for page in _ALL_PAGES:
-            if st.button(f"{_P}n:{page}", key=f"_nb_{page}"):
-                set_page(page)
-                st.rerun()
-
-        for sec in _ALL_SECTIONS:
-            if st.button(f"{_P}s:{sec}", key=f"_ns_{sec}"):
-                sk = f"sb_{sec}"
-                st.session_state[sk] = not st.session_state.get(sk, sec in _DEFAULT_OPEN)
-                st.rerun()

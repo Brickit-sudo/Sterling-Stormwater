@@ -15,9 +15,11 @@ import streamlit as st
 _CREDS_PATH   = Path(__file__).parent.parent.parent / ".google_credentials.json"
 _CONFIG_PATH  = Path(__file__).parent.parent.parent / ".google_config.json"
 
-_DRIVE_SCOPES = [
+_SCOPES = [
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/calendar",
 ]
 
 
@@ -55,7 +57,7 @@ def _get_credentials():
     if not creds_dict:
         return None
     from google.oauth2.service_account import Credentials
-    return Credentials.from_service_account_info(creds_dict, scopes=_DRIVE_SCOPES)
+    return Credentials.from_service_account_info(creds_dict, scopes=_SCOPES)
 
 
 @st.cache_resource
@@ -74,6 +76,36 @@ def get_sheets_client():
         return None
     import gspread
     return gspread.service_account_from_dict(creds_dict)
+
+
+@st.cache_resource
+def get_gmail_service(user_email: str = ""):
+    """Gmail API service. Requires domain-wide delegation for non-service-account sends."""
+    try:
+        from googleapiclient.discovery import build
+        creds = _get_credentials()
+        if not creds:
+            return None
+        if user_email:
+            creds = creds.with_subject(user_email)
+        return build("gmail", "v1", credentials=creds)
+    except Exception:
+        return None
+
+
+@st.cache_resource
+def get_calendar_service(user_email: str = ""):
+    """Google Calendar API service."""
+    try:
+        from googleapiclient.discovery import build
+        creds = _get_credentials()
+        if not creds:
+            return None
+        if user_email:
+            creds = creds.with_subject(user_email)
+        return build("calendar", "v3", credentials=creds)
+    except Exception:
+        return None
 
 
 def service_email() -> str:
@@ -198,6 +230,71 @@ def append_row_to_sheet(sheet_url: str, tab_name: str, row: dict) -> None:
     except Exception:
         ws = sh.add_worksheet(title=tab_name, rows=1000, cols=50)
     ws.append_row(list(row.values()))
+
+
+def send_email(to: str, subject: str, html_body: str,
+               sender: str = "", attachments: list = []) -> bool:
+    """Send email via Gmail API. sender must be the impersonated user's email."""
+    import base64
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    try:
+        svc = get_gmail_service(sender)
+        if not svc:
+            return False
+        msg = MIMEMultipart("alternative")
+        msg["To"] = to
+        msg["From"] = sender
+        msg["Subject"] = subject
+        msg.attach(MIMEText(html_body, "html"))
+        raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+        svc.users().messages().send(userId="me", body={"raw": raw}).execute()
+        return True
+    except Exception:
+        return False
+
+
+def create_calendar_event(calendar_id: str, summary: str, start_date: str,
+                           end_date: str = "", description: str = "",
+                           attendees: list[str] = [], user_email: str = "") -> str | None:
+    """Create a Google Calendar event. Returns event ID or None on failure.
+    start_date / end_date are ISO date strings (YYYY-MM-DD) for all-day events."""
+    try:
+        svc = get_calendar_service(user_email)
+        if not svc:
+            return None
+        end = end_date or start_date
+        event = {
+            "summary": summary,
+            "description": description,
+            "start": {"date": start_date},
+            "end":   {"date": end},
+            "attendees": [{"email": e} for e in attendees if e],
+        }
+        result = svc.events().insert(calendarId=calendar_id, body=event).execute()
+        return result.get("id")
+    except Exception:
+        return None
+
+
+def export_to_notebooklm(content: str, filename: str, folder_id: str = "") -> str | None:
+    """Upload a plain-text document to Google Drive for NotebookLM ingestion.
+    Returns the Drive file URL or None on failure."""
+    try:
+        from googleapiclient.http import MediaInMemoryUpload
+        svc = get_drive_service()
+        if not svc:
+            return None
+        cfg = load_config()
+        fid = folder_id or cfg.get("notebooklm_folder_id", "")
+        meta = {"name": filename, "mimeType": "application/vnd.google-apps.document"}
+        if fid:
+            meta["parents"] = [fid]
+        media = MediaInMemoryUpload(content.encode("utf-8"), mimetype="text/plain")
+        f = svc.files().create(body=meta, media_body=media, fields="id,webViewLink").execute()
+        return f.get("webViewLink")
+    except Exception:
+        return None
 
 
 def test_connection() -> tuple[bool, str]:

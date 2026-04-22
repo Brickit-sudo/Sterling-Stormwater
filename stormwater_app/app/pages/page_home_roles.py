@@ -57,8 +57,9 @@ def _section(title: str) -> None:
 
 
 def _quick_btn(icon: str, label: str, page: str, col) -> None:
+    role = st.session_state.get("user_role", "x")
     with col:
-        if st.button(f"{icon}  {label}", use_container_width=True, key=f"qb_{page}_{label}"):
+        if st.button(f"{icon}  {label}", use_container_width=True, key=f"qb_{role}_{page}_{label}"):
             set_page(page)
             st.rerun()
 

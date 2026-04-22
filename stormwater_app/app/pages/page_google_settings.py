@@ -123,9 +123,42 @@ def render() -> None:
         save_config(cfg)
         st.toast("Sheets config saved", icon="✅")
 
-    # ── Step 4: Sync CRM to Sheets ────────────────────────────────────────────
+    # ── Step 4: Calendar & Email config ──────────────────────────────────────────
+    _section("Step 4 — Calendar & Email (Optional)", "📅")
+    st.info(
+        "Gmail send and Calendar sync require **Domain-Wide Delegation** enabled for your "
+        "service account in Google Workspace Admin. Personal Gmail accounts are not supported.",
+        icon="ℹ️",
+    )
+    col_cal, col_sender = st.columns(2)
+    calendar_id = col_cal.text_input(
+        "Google Calendar ID",
+        value=cfg.get("google_calendar_id", ""),
+        placeholder="primary or calendar@group.calendar.google.com",
+        key="g_calendar_id",
+    )
+    sender_email = col_sender.text_input(
+        "Sender email (Gmail)",
+        value=cfg.get("gmail_sender", ""),
+        placeholder="you@yourdomain.com",
+        key="g_sender_email",
+    )
+    notebooklm_folder = st.text_input(
+        "NotebookLM Drive Folder ID",
+        value=cfg.get("notebooklm_folder_id", ""),
+        placeholder="Drive folder ID — add this folder as a NotebookLM source",
+        key="g_notebooklm_folder",
+    )
+    if st.button("Save Calendar / Email Config", key="save_cal_email"):
+        cfg["google_calendar_id"] = calendar_id
+        cfg["gmail_sender"] = sender_email
+        cfg["notebooklm_folder_id"] = notebooklm_folder
+        save_config(cfg)
+        st.toast("Calendar & email config saved", icon="✅")
+
+    # ── Step 5: Sync CRM to Sheets ────────────────────────────────────────────
     if cfg.get("sheets_crm_url"):
-        _section("Sync CRM Data to Google Sheets", "🔄")
+        _section("Step 5 — Sync CRM Data to Google Sheets", "🔄")
         st.caption(f"Destination: {cfg['sheets_crm_url']}")
 
         c1, c2, c3, c4 = st.columns(4)
