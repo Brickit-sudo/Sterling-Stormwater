@@ -144,6 +144,7 @@ def _site_chip(meta) -> None:
 def render_sidebar():
     if st.session_state.get("sidebar_hidden"):
         # Slide sidebar off-screen, collapse main margin to full width
+        # (expand button is rendered by app.py to avoid duplicate key)
         st.markdown(
             "<style>[data-testid='stSidebar']{"
             "transform:translateX(-230px)!important;"
@@ -152,23 +153,6 @@ def render_sidebar():
             "[data-testid='stMain']{margin-left:0!important}</style>",
             unsafe_allow_html=True,
         )
-        # Floating expand button — rendered in main area, styled fixed top-left
-        st.markdown(
-            "<style>#sw-expand-wrap{position:fixed;left:6px;top:12px;z-index:1000}"
-            "#sw-expand-wrap .stButton>button{"
-            "width:32px!important;height:32px!important;padding:0!important;"
-            "font-size:13px!important;border-radius:6px!important;"
-            "background:rgba(43,45,66,0.9)!important;"
-            "border:1px solid rgba(255,255,255,0.12)!important;"
-            "color:#d5d8df!important;line-height:1!important}"
-            "</style>"
-            '<div id="sw-expand-wrap">',
-            unsafe_allow_html=True,
-        )
-        if st.button("▶", key="sidebar_expand_btn", help="Expand sidebar"):
-            st.session_state["sidebar_hidden"] = False
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
 
     with st.sidebar:
         proj    = get_project()
