@@ -98,10 +98,7 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-/* Push main content right of the always-visible fixed sidebar */
-[data-testid="stMain"] {
-  margin-left: var(--sidebar-width) !important;
-}
+/* Native Streamlit sidebar handles stMain offset via flexbox — no manual margin needed */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LAYOUT — push content below fixed topbar + viewtabs
@@ -110,8 +107,8 @@ html, body {
 [data-testid="stMainBlockContainer"] {
   max-width: 100% !important;
   padding-top: calc(var(--content-offset) + 20px) !important;
-  padding-left: 2rem !important;
-  padding-right: 2rem !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
   padding-bottom: 2rem !important;
 }
 
