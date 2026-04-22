@@ -52,8 +52,9 @@ _ALL_PAGES = [
 ]
 _ALL_SECTIONS = ["crm", "finance", "reports", "archive", "insights", "settings"]
 
-# Prefix that makes button text invisible even if CSS fails
-_P = "\u200b"  # zero-width space
+# Prefix for hidden nav button labels — plain ASCII, never stripped by markdown
+_N = "__sw_n_"   # page nav buttons
+_S = "__sw_s_"   # section toggle buttons
 
 
 # ── Nav HTML + CSS ────────────────────────────────────────────────────────────
@@ -78,15 +79,14 @@ _NAV_CSS = """<style>
 </style>"""
 
 
-def _js_click(btn_text: str) -> str:
-    """Inline onclick JS: finds a hidden sidebar button by its <p> text and clicks it.
-    Self-contained — no dependency on any globally-defined function."""
-    # btn_text is embedded as a JS string literal; use &quot; for the CSS attribute quotes.
+def _js_click(btn_label: str) -> str:
+    """Self-contained onclick: finds a hidden sidebar button by innerText and clicks it.
+    Uses innerText (not textContent/querySelector('p')) — works across all Streamlit versions.
+    pointer-events:none is NOT set on target buttons so .click() dispatches correctly."""
     return (
         "var _b=document.querySelectorAll('[data-testid=&quot;stSidebar&quot;] button');"
         f"for(var _i=0;_i<_b.length;_i++){{"
-        f"var _p=_b[_i].querySelector('p');"
-        f"if((_p&&_p.textContent==='{btn_text}')||_b[_i].textContent.trim()==='{btn_text}')"
+        f"if((_b[_i].innerText||_b[_i].textContent).trim()==='{btn_label}')"
         f"{{_b[_i].click();return;}}}}"
     )
 
@@ -95,7 +95,7 @@ def _row(page: str, icon: str, label: str, current: str, indent: int = 0) -> str
     cls = "sw-row on" if current == page else "sw-row"
     if indent:
         cls += f" i{indent}"
-    return (f'<div class="{cls}" onclick="{_js_click(f"{_P}n:{page}")}">'
+    return (f'<div class="{cls}" onclick="{_js_click(_N + page)}">'
             f'<span class="sw-ico">{icon}</span><span>{label}</span></div>')
 
 
@@ -104,7 +104,7 @@ def _sec(key: str, icon: str, label: str, body: str, open_set: set) -> str:
     chev = "▾" if is_open else "▸"
     cls = "sw-body open" if is_open else "sw-body shut"
     return (
-        f'<div class="sw-row sec" onclick="{_js_click(f"{_P}s:{key}")}">'
+        f'<div class="sw-row sec" onclick="{_js_click(_S + key)}">'
         f'<span class="sw-chev">{chev}</span>'
         f'<span class="sw-ico">{icon}</span><span>{label}</span></div>'
         f'<div class="{cls}">{body}</div>'
@@ -183,11 +183,11 @@ _CHROME_CSS = """<style>
 [data-testid="stSidebar"] [data-testid="stElementContainer"],
 [data-testid="stSidebar"] .element-container{
   margin-top:0!important;margin-bottom:0!important}
-/* Hide hidden nav button zone — positioned off-screen, zero size */
-[data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div .stButton>button{
+/* Hide hidden nav button zone — off-screen, pointer-events MUST remain auto for .click() */
+[data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div .stButton>button,
+[data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div [data-testid*="Button"]{
   position:fixed!important;left:-9999px!important;top:-9999px!important;
-  width:1px!important;height:1px!important;opacity:0!important;
-  pointer-events:none!important;overflow:hidden!important}
+  width:1px!important;height:1px!important;opacity:0!important;overflow:hidden!important}
 [data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div .stButton{
   margin:0!important;padding:0!important;height:0!important;overflow:hidden!important}
 [data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div{
@@ -283,24 +283,33 @@ def render_sidebar():
                     set_page("setup")
                     st.rerun()
 
-        # ── Role switcher ─────────────────────────────────────────────────
+        # ── Role indicator / admin-only switcher ──────────────────────────
         st.markdown(
             '<div style="margin:8px 6px 0;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)"></div>',
             unsafe_allow_html=True,
         )
-        role_options = list(_ROLE_LABELS.keys())
-        role_idx = role_options.index(role) if role in role_options else 0
-        new_role = st.selectbox(
-            "View as",
-            options=role_options,
-            index=role_idx,
-            format_func=lambda r: _ROLE_LABELS[r],
-            key="role_switcher_select",
-            label_visibility="collapsed",
-        )
-        if new_role != role:
-            st.session_state.user_role = new_role
-            st.rerun()
+        if role == "owner":
+            # Owners can switch roles for testing/impersonation
+            role_options = list(_ROLE_LABELS.keys())
+            role_idx = role_options.index(role) if role in role_options else 0
+            new_role = st.selectbox(
+                "View as",
+                options=role_options,
+                index=role_idx,
+                format_func=lambda r: _ROLE_LABELS[r],
+                key="role_switcher_select",
+                label_visibility="collapsed",
+            )
+            if new_role != role:
+                st.session_state.user_role = new_role
+                st.rerun()
+        else:
+            # Non-owners see their role as read-only
+            st.markdown(
+                f'<div style="font-size:11px;color:#6e6f8f;text-align:center;padding:2px 0">'
+                f'{_ROLE_LABELS.get(role, role)}</div>',
+                unsafe_allow_html=True,
+            )
 
         st.markdown(
             '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
@@ -310,17 +319,16 @@ def render_sidebar():
         )
 
         # ── Off-screen hidden Streamlit buttons (JS click targets) ────────
-        # MUST come last — CSS hides them via the #sw-hb-zone marker.
-        # Everything after #sw-hb-zone gets height:0 + pointer-events:none.
+        # Must be last. CSS moves them off-screen; pointer-events stays auto so .click() works.
         st.markdown('<div id="sw-hb-zone"></div>', unsafe_allow_html=True)
 
         for page in _ALL_PAGES:
-            if st.button(f"{_P}n:{page}", key=f"_nb_{page}"):
+            if st.button(f"{_N}{page}", key=f"_nb_{page}"):
                 set_page(page)
                 st.rerun()
 
         for sec in _ALL_SECTIONS:
-            if st.button(f"{_P}s:{sec}", key=f"_ns_{sec}"):
+            if st.button(f"{_S}{sec}", key=f"_ns_{sec}"):
                 sk = f"sb_{sec}"
                 st.session_state[sk] = not st.session_state.get(sk, sec in _DEFAULT_OPEN)
                 st.rerun()
