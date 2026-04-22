@@ -515,15 +515,15 @@ button[data-testid^="stBaseButton"]:disabled {
 [data-testid="stSidebar"] .stButton > button {
   background: transparent !important;
   border: none !important;
-  color: var(--text-secondary) !important;
+  color: #9699a6 !important;
   border-radius: 6px !important;
   text-align: left !important;
   justify-content: flex-start !important;
   font-size: 13px !important;
   font-weight: 400 !important;
-  padding: 5px 10px !important;
-  height: 32px !important;
-  min-height: 32px !important;
+  padding: 7px 10px !important;
+  height: 36px !important;
+  min-height: 36px !important;
   transition: background var(--motion-fast) var(--ease-out),
               color var(--motion-fast) var(--ease-out) !important;
 }
@@ -532,10 +532,9 @@ button[data-testid^="stBaseButton"]:disabled {
   color: var(--text-primary) !important;
 }
 
-/* Active nav item */
-[data-testid="stSidebar"] div:has(.sw-nav.sw-active) .stButton > button {
-  background: rgba(26,183,56,0.16) !important;
-  color: var(--green) !important;
+/* Active nav item - uses stVerticalBlock > direct-child to avoid ancestor bleed */
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div:has([data-testid="stMarkdownContainer"]:has(.sw-nav.sw-active)) + div .stButton > button {
+  color: #1AB738 !important;
   font-weight: 600 !important;
 }
 
