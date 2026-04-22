@@ -502,6 +502,15 @@ button[data-testid^="stBaseButton"]:disabled {
 [data-testid="stSidebar"] strong, [data-testid="stSidebar"] b { color: var(--text-primary) !important; }
 [data-testid="stSidebar"] hr { border-color: var(--border-subtle) !important; margin: 5px 0 !important; }
 
+/* Eliminate dead zones between sidebar elements */
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+  gap: 0 !important;
+}
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div {
+  min-height: 0 !important;
+  padding-bottom: 0 !important;
+}
+
 /* Sidebar nav buttons */
 [data-testid="stSidebar"] .stButton > button {
   background: transparent !important;
@@ -524,10 +533,10 @@ button[data-testid^="stBaseButton"]:disabled {
 }
 
 /* Active nav item */
-[data-testid="stSidebar"] div:has(.sw-nav.sw-active) + div .stButton > button {
+[data-testid="stSidebar"] div:has(.sw-nav.sw-active) .stButton > button {
   background: rgba(26,183,56,0.16) !important;
-  color: var(--text-primary) !important;
-  font-weight: 500 !important;
+  color: var(--green) !important;
+  font-weight: 600 !important;
 }
 
 /* Indented sub-items */

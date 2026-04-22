@@ -83,7 +83,8 @@ def _nav_item(page_key: str, icon: str, label: str, current: str) -> None:
             '<div style="'
             'background:linear-gradient(90deg,rgba(26,183,56,0.18) 0%,rgba(26,183,56,0.05) 100%);'
             'border-left:3px solid #1AB738;'
-            'border-radius:0 6px 6px 0;margin:1px 2px 1px 0">',
+            'border-radius:0 6px 6px 0;margin:1px 2px 1px 0">'
+            '<span class="sw-nav sw-active" style="display:none"></span>',
             unsafe_allow_html=True,
         )
     if st.button(f"{icon}  {label}", key=f"nav_{page_key}", use_container_width=True):
@@ -178,54 +179,54 @@ def render_sidebar():
             st.rerun()
 
         _nav_rule()
-        _nav_item("home", "🏠", "Home",     current)
-        _nav_item("map",  "🗺", "Site Map", current)
+        _nav_item("home", "⌂", "Home",     current)
+        _nav_item("map",  "◎", "Site Map", current)
         _nav_rule()
 
         # ── CRM ───────────────────────────────────────────────────────────────
         if _allow("crm"):
             _section_divider("CRM")
-            _nav_item("calendar",      "📅", "Calendar",       current)
-            _nav_item("crm_sites",     "🏢", "Sites",          current)
-            _nav_item("crm_clients",   "👤", "Clients",        current)
-            _nav_item("crm_leads",     "🎯", "Leads",          current)
-            _nav_item("crm_prospects", "🔭", "Prospects",      current)
-            _nav_item("crm_jobs",      "🔧", "Jobs",           current)
-            _nav_item("crm_comms",     "💬", "Communications", current)
+            _nav_item("calendar",      "⊡", "Calendar",       current)
+            _nav_item("crm_sites",     "⊞", "Sites",          current)
+            _nav_item("crm_clients",   "◯", "Clients",        current)
+            _nav_item("crm_leads",     "→", "Leads",          current)
+            _nav_item("crm_prospects", "⊛", "Prospects",      current)
+            _nav_item("crm_jobs",      "⊓", "Jobs",           current)
+            _nav_item("crm_comms",     "◌", "Communications", current)
             _section_divider("Finance")
-            _nav_item("crm_invoices",    "🧾", "Invoices",        current)
-            _nav_item("crm_quotes",      "💵", "Quote Builder",   current)
-            _nav_item("crm_svc_catalog", "📋", "Service Catalog", current)
+            _nav_item("crm_invoices",    "▭", "Invoices",        current)
+            _nav_item("crm_quotes",      "⊘", "Quote Builder",   current)
+            _nav_item("crm_svc_catalog", "☰", "Service Catalog", current)
 
         # ── Reports ───────────────────────────────────────────────────────────
         if _allow("reports"):
             _section_divider("Reports")
-            _nav_item("photosheet", "📷", "Photosheet", current)
+            _nav_item("photosheet", "⊠", "Photosheet", current)
             _sub_label("Full Report")
-            _nav_item("setup",    "🛠", "Setup",     current)
-            _nav_item("systems",  "🔩", "Systems",   current)
-            _nav_item("writeups", "✏️", "Write-Ups", current)
-            _nav_item("export",   "📤", "Export",    current)
+            _nav_item("setup",    "⊙", "Setup",     current)
+            _nav_item("systems",  "⊕", "Systems",   current)
+            _nav_item("writeups", "▤", "Write-Ups", current)
+            _nav_item("export",   "↓", "Export",    current)
 
         # ── Archive ───────────────────────────────────────────────────────────
         if _allow("archive"):
             _section_divider("Archive")
-            _nav_item("crm_files",   "📂", "File Archive",   current)
-            _nav_item("library",     "📚", "Report Library", current)
-            _nav_item("bulk_import", "📥", "Bulk Import",    current)
-            _nav_item("crm_import",  "📨", "Import Data",    current)
-            _nav_item("sync",        "🔄", "Drive Sync",     current)
+            _nav_item("crm_files",   "□", "File Archive",   current)
+            _nav_item("library",     "⊟", "Report Library", current)
+            _nav_item("bulk_import", "⇩", "Bulk Import",    current)
+            _nav_item("crm_import",  "←", "Import Data",    current)
+            _nav_item("sync",        "↺", "Drive Sync",     current)
 
         # ── Insights ──────────────────────────────────────────────────────────
         if _allow("insights"):
             _section_divider("Insights")
-            _nav_item("trends",         "📊", "Site History",   current)
-            _nav_item("knowledge_base", "🧠", "Knowledge Base", current)
+            _nav_item("trends",         "↗", "Site History",   current)
+            _nav_item("knowledge_base", "◉", "Knowledge Base", current)
 
         # ── Settings ──────────────────────────────────────────────────────────
         if _allow("settings"):
             _section_divider("Settings")
-            _nav_item("google_settings", "🔗", "Google Integration", current)
+            _nav_item("google_settings", "⊗", "Google Integration", current)
 
         # ── Active project chip + Save/New ────────────────────────────────────
         if current in _FULLREPORT_PAGES:
