@@ -40,6 +40,18 @@ try:
 except Exception:
     pass
 
+try:
+    from app.services.sheets_sync import start_worker
+    start_worker()
+except Exception:
+    pass
+
+try:
+    from app.services.sheets_sync import sync_all_crm
+    sync_all_crm()
+except Exception:
+    pass
+
 # ── Session bootstrap ─────────────────────────────────────────────────────────
 init_session()
 
@@ -94,6 +106,7 @@ PAGE_MAP = {
     "crm_files":      lambda: __import__("app.pages.page_crm_files",      fromlist=["render"]).render(),
     "knowledge_base": lambda: __import__("app.pages.page_knowledge_base", fromlist=["render"]).render(),
     "bulk_import":    lambda: __import__("app.pages.page_bulk_import",    fromlist=["render"]).render(),
+    "sync":           lambda: __import__("app.pages.page_sync",            fromlist=["render"]).render(),
     "sites":          lambda: __import__("app.pages.page_sites",          fromlist=["render"]).render(),
     "crm_sites":      lambda: __import__("app.pages.page_crm_sites",      fromlist=["render"]).render(),
     "crm_clients":    lambda: __import__("app.pages.page_crm_clients",    fromlist=["render"]).render(),

@@ -111,6 +111,7 @@ def render():
             result = _lead_form("add")
             if result:
                 upsert_lead(result)
+                from app.services.sheets_sync import sync_crm_leads; sync_crm_leads()
                 st.session_state["crm_lead_add"] = False
                 st.toast("Lead added!", icon="🎯")
                 st.rerun()
@@ -249,6 +250,7 @@ def render():
                             result = _lead_form(f"edit_{lid}", existing=lead)
                             if result:
                                 upsert_lead(result)
+                                from app.services.sheets_sync import sync_crm_leads; sync_crm_leads()
                                 st.session_state[edit_key] = False
                                 st.toast("Lead updated!", icon="✅")
                                 st.rerun()

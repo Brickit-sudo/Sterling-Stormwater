@@ -17,7 +17,7 @@ from pathlib import Path
 # Load .env on first import (no-op if already loaded or package not present)
 try:
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).parent.parent.parent / ".env")
+    load_dotenv(Path(__file__).parent.parent.parent / ".env", override=True)
 except ImportError:
     pass
 
@@ -189,3 +189,154 @@ Do not repeat individual system details — those appear in dedicated sections b
     )
 
     return response.content[0].text.strip()
+
+
+def _call_claude_json(prompt: str) -> dict:
+    """Call Claude and parse JSON response. Returns dict or {} on failure."""
+    import json, re
+    try:
+        client = get_client()
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = msg.content[0].text.strip()
+        # Extract JSON even if wrapped in markdown code fences
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        return json.loads(match.group()) if match else {}
+    except Exception:
+        return {}
+
+
+def classify_document(text: str) -> str:
+    """Classify a document as: inspection_report | maintenance_report | invoice | proposal | other."""
+    snippet = text[:800]
+    prompt = f"""Classify this stormwater document. Return ONLY one of these exact strings:
+inspection_report
+maintenance_report
+invoice
+proposal
+other
+
+Document text:
+{snippet}
+
+Classification:"""
+    try:
+        client = get_client()
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=20,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        result = msg.content[0].text.strip().lower()
+        for t in ("inspection_report", "maintenance_report", "invoice", "proposal"):
+            if t in result:
+                return t
+        return "other"
+    except Exception:
+        return "other"
+
+
+def extract_inspection_fields(text: str) -> dict:
+    """Extract structured fields from a stormwater inspection report PDF text."""
+    prompt = f"""Extract fields from this stormwater inspection report. Return valid JSON only, no markdown.
+
+Fields to extract:
+- site_name: the site name (e.g. "Southern Maine Health Care")
+- site_address: full address
+- client: client/owner name if mentioned
+- inspection_date: date inspection was performed (YYYY-MM-DD if possible, else as written)
+- inspector: who performed inspection ("STERLING Stormwater Maintenance Services, LLC" or individual name)
+- report_type: "Inspection" or "Inspection and Maintenance"
+- overall_condition: overall site condition if stated (Good/Fair/Poor or narrative)
+- findings_summary: 2-3 sentence summary of key findings
+- recommendations_summary: 2-3 sentence summary of key recommendations
+- bmp_types: comma-separated list of BMP/system types mentioned (e.g. "catch basins, bioretention, StormFilter")
+- num_pages: number of pages in report if stated
+
+Document text:
+{text[:3000]}
+
+JSON:"""
+    return _call_claude_json(prompt)
+
+
+def extract_maintenance_fields(text: str) -> dict:
+    """Extract structured fields from a stormwater maintenance report PDF text."""
+    prompt = f"""Extract fields from this stormwater maintenance report. Return valid JSON only, no markdown.
+
+Fields to extract:
+- site_name: the site name
+- site_address: full address/location
+- service_date: date maintenance was performed (YYYY-MM-DD if possible)
+- inspector: company/person who performed service
+- systems_maintained: comma-separated list of systems that were serviced
+- systems_not_completed: comma-separated list of systems where work could NOT be completed and why
+- maintenance_summary: 2-3 sentence summary of work performed
+- next_service_date: next recommended service date if mentioned
+- num_pages: number of pages if stated
+
+Document text:
+{text[:3000]}
+
+JSON:"""
+    return _call_claude_json(prompt)
+
+
+def extract_invoice_fields(text: str) -> dict:
+    """Extract structured fields from a Sterling Stormwater invoice PDF."""
+    prompt = f"""Extract fields from this stormwater services invoice. Return valid JSON only, no markdown.
+
+Fields to extract:
+- site_name: site name
+- site_address: site address
+- client_name: who the invoice is billed to
+- invoice_number: invoice number/ID
+- invoice_date: invoice date (YYYY-MM-DD if possible)
+- status: payment status (e.g. "Not Paid", "Paid")
+- line_items: list of objects with "description" and "amount" (dollar amount as string)
+- subtotal: subtotal amount
+- total: total amount
+- balance_due: balance due
+
+Document text:
+{text[:2000]}
+
+JSON:"""
+    return _call_claude_json(prompt)
+
+
+def extract_proposal_fields(text: str) -> dict:
+    """Extract structured fields from a Sterling Stormwater proposal PDF."""
+    prompt = f"""Extract fields from this stormwater compliance proposal. Return valid JSON only, no markdown.
+
+Fields to extract:
+- site_name: site name
+- site_address: location/address
+- quote_number: quote or proposal number
+- quote_date: date of proposal (YYYY-MM-DD if possible)
+- contract_term: contract term (e.g. "5 Years", "Annual")
+- annual_total: total annual cost as string
+- services: comma-separated list of services proposed
+- notes: key notes or special conditions
+
+Document text:
+{text[:2000]}
+
+JSON:"""
+    return _call_claude_json(prompt)
+
+
+def extract_document_fields(text: str, doc_type: str) -> dict:
+    """Dispatcher — extract fields based on document type."""
+    if doc_type == "inspection_report":
+        return extract_inspection_fields(text)
+    elif doc_type == "maintenance_report":
+        return extract_maintenance_fields(text)
+    elif doc_type == "invoice":
+        return extract_invoice_fields(text)
+    elif doc_type == "proposal":
+        return extract_proposal_fields(text)
+    return {}

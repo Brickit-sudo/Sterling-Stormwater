@@ -84,6 +84,7 @@ def render():
             result = _contact_form("add")
             if result:
                 upsert_contact(result)
+                from app.services.sheets_sync import sync_crm_contacts; sync_crm_contacts()
                 st.session_state["crm_contact_add"] = False
                 st.toast("Contact added!", icon="✅")
                 st.rerun()
@@ -177,6 +178,7 @@ def render():
                     result = _contact_form(f"edit_{cid}", existing=contact)
                     if result:
                         upsert_contact(result)
+                        from app.services.sheets_sync import sync_crm_contacts; sync_crm_contacts()
                         st.session_state[edit_key] = False
                         st.toast("Contact updated!", icon="✅")
                         st.rerun()

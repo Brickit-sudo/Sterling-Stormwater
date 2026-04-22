@@ -108,6 +108,7 @@ def render():
             result = _add_job_form(prefill)
             if result:
                 upsert_job(result)
+                from app.services.sheets_sync import sync_crm_jobs; sync_crm_jobs()
                 st.session_state["crm_job_add"] = False
                 st.toast("Job added!", icon="✅")
                 st.rerun()
@@ -185,6 +186,7 @@ def render():
                         upd = dict(job)
                         upd["job_status"] = new_status
                         upsert_job(upd)
+                        from app.services.sheets_sync import sync_crm_jobs; sync_crm_jobs()
                         st.toast(f"Status → {new_status}", icon="✅")
                         st.rerun()
 

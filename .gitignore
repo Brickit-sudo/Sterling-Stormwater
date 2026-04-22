@@ -26,3 +26,11 @@ ENV/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Google credentials — stored as Railway env vars in production
+**/.google_config.json
+**/.google_credentials.json
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/worktrees/

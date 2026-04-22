@@ -1,15 +1,12 @@
 """
 app/components/styles.py
-Sterling Stormwater — monday.com-inspired dark enterprise design system.
+Sterling Stormwater — refactored design system.
 
-Palette (monday.com dark theme + Sterling brand):
-  Base:      #181b34  — main background (monday dark)
-  Surface:   #1c1f3b  — sidebar, topbar (monday board_views_blue)
-  Elevated:  #30324e  — cards, panels (monday panel)
-  Overlay:   #363a52  — hover, popovers (monday hover)
-  Input:     #2a2d4a  — form fields
-  Green:     #1AB738  — Sterling accent / primary CTA
-  Text:      #d5d8df  primary · #9699a6  secondary · #6e6f8f  muted
+Key changes from previous version:
+  - Text contrast lifted: primary #f0f2f6, secondary #b8bbc8, muted #7c7f96
+  - Card grid: minmax(240px) auto-fill, eliminates dead zone on wide screens
+  - Sidebar logo: full-width 60px height
+  - Collapse button: full-width strip below logo
 """
 
 import streamlit as st
@@ -19,51 +16,45 @@ def inject_styles():
     st.markdown("""
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
-   FONTS — Figtree (monday.com primary) + JetBrains Mono
+   FONTS
 ═══════════════════════════════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   DESIGN TOKENS — monday.com dark palette + Sterling brand
+   DESIGN TOKENS
 ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Backgrounds — monday.com dark theme */
   --bg-base:     #181b34;
   --bg-surface:  #1c1f3b;
   --bg-elevated: #30324e;
   --bg-overlay:  #363a52;
   --bg-input:    #2a2d4a;
 
-  /* Borders */
   --border-subtle:  rgba(255,255,255,0.06);
   --border-default: #4b4e69;
   --border-strong:  rgba(255,255,255,0.22);
   --border-accent:  rgba(26,183,56,0.40);
 
-  /* Text — monday.com dark text hierarchy */
-  --text-primary:   #d5d8df;
-  --text-secondary: #9699a6;
-  --text-muted:     #6e6f8f;
+  /* ── Contrast-lifted text scale ── */
+  --text-primary:   #f0f2f6;
+  --text-secondary: #b8bbc8;
+  --text-muted:     #7c7f96;
   --text-disabled:  #4b4e69;
   --text-on-green:  #04140A;
 
-  /* Brand — Sterling Green */
   --green:       #1AB738;
   --green-hover: #22D344;
   --green-glow:  rgba(26,183,56,0.25);
   --green-dim:   rgba(26,183,56,0.14);
 
-  /* Status — monday.com colors */
   --danger:  #e2445c;
   --warning: #ffcb00;
   --info:    #579bfc;
 
-  /* Motion — monday.com productive timing */
   --motion-fast: 100ms;
   --motion-base: 150ms;
   --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Layout */
   --sidebar-width:  230px;
   --topbar-height:  52px;
   --viewtab-height: 40px;
@@ -98,15 +89,13 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-/* Sidebar is position:fixed so stMain needs an explicit margin to not be overlapped.
-   Transition matches sidebar's own transition for smooth expand/collapse. */
 [data-testid="stMain"] {
   margin-left: var(--sidebar-width) !important;
   transition: margin-left 200ms ease !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LAYOUT — push content below fixed topbar + viewtabs
+   LAYOUT
 ═══════════════════════════════════════════════════════════════════════════ */
 .block-container,
 [data-testid="stMainBlockContainer"] {
@@ -151,12 +140,10 @@ html, body {
 .stMarkdown h2 {
   color: var(--text-primary) !important;
   font-size: 1.25rem !important; font-weight: 600 !important;
-  letter-spacing: -0.015em !important;
 }
 .stMarkdown h3 {
   color: var(--text-primary) !important;
   font-size: 1.05rem !important; font-weight: 600 !important;
-  letter-spacing: -0.01em !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -205,7 +192,6 @@ label[data-testid="stWidgetLabel"] p,
   border: 1px solid var(--border-default) !important;
   border-radius: 6px !important;
   font-size: 13px !important;
-  font-weight: 400 !important;
   transition: border-color var(--motion-fast) var(--ease-out),
               box-shadow var(--motion-fast) var(--ease-out) !important;
 }
@@ -231,8 +217,6 @@ label[data-testid="stWidgetLabel"] p,
   background: transparent !important;
   font-size: 13px !important;
 }
-
-/* Dropdown portal */
 [data-baseweb="popover"], [data-baseweb="popover"] > div,
 [data-baseweb="popover"] [data-baseweb="menu"] {
   background: var(--bg-elevated) !important;
@@ -288,8 +272,6 @@ label[data-testid="stWidgetLabel"] p,
 }
 [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] span,
 [data-testid="stFileUploader"] [data-testid="stFileUploaderFileName"] { color: var(--text-secondary) !important; font-size: 13px !important; }
-[data-testid="stFileUploader"] button[kind="minimal"],
-[data-testid="stFileUploader"] button[title="Remove file"] { color: var(--text-muted) !important; background: transparent !important; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    EXPANDERS
@@ -317,7 +299,7 @@ details[data-testid="stExpander"] > div[data-testid="stExpanderDetails"] {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   MISC ELEMENTS
+   MISC
 ═══════════════════════════════════════════════════════════════════════════ */
 hr { border-color: var(--border-subtle) !important; margin: 8px 0 !important; }
 [data-testid="stCheckbox"] label p, [data-testid="stCheckbox"] span { color: var(--text-secondary) !important; font-size: 13px !important; }
@@ -347,7 +329,7 @@ hr { border-color: var(--border-subtle) !important; margin: 8px 0 !important; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TABS — compact monday.com style
+   TABS
 ═══════════════════════════════════════════════════════════════════════════ */
 [data-testid="stTabs"] button[data-baseweb="tab"] {
   font-size: 12px !important;
@@ -380,16 +362,13 @@ hr { border-color: var(--border-subtle) !important; margin: 8px 0 !important; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   BUTTON INTERNALS — strip Streamlit injected bg
+   BUTTON INTERNALS
 ═══════════════════════════════════════════════════════════════════════════ */
 button[data-testid^="stBaseButton"] *,
 button[data-testid^="stBaseButton"] > div,
 button[data-testid^="stBaseButton"] > div > span,
-button[data-testid^="stBaseButton"] [data-has-shortcut],
-button[data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"],
-button[data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"] p,
 .stButton > button *, .stButton > button > div,
-.stButton > button > div > span, .stButton > button [data-has-shortcut],
+.stButton > button > div > span,
 .stButton > button [data-testid="stMarkdownContainer"],
 .stButton > button [data-testid="stMarkdownContainer"] p {
   background: transparent !important; background-color: transparent !important;
@@ -397,7 +376,7 @@ button[data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"] p,
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   BUTTONS — Primary (Sterling Green)
+   BUTTONS — Primary
 ═══════════════════════════════════════════════════════════════════════════ */
 button[data-testid="stBaseButton-primary"],
 .stButton > button[kind="primary"] {
@@ -420,7 +399,7 @@ button[data-testid="stBaseButton-primary"]:active,
 .stButton > button[kind="primary"]:active { transform: scale(0.97) !important; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   BUTTONS — Secondary (ghost)
+   BUTTONS — Secondary
 ═══════════════════════════════════════════════════════════════════════════ */
 button[data-testid="stBaseButton-secondary"],
 .stButton > button[kind="secondary"],
@@ -467,32 +446,23 @@ button[data-testid^="stBaseButton"]:disabled {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SIDEBAR COLLAPSE — hide native Streamlit « button; we use our own ◀ toggle
+   SIDEBAR COLLAPSE — hide native Streamlit button
 ═══════════════════════════════════════════════════════════════════════════ */
 [data-testid="stSidebarCollapseButton"],
 [data-testid="collapsedControl"] {
   display: none !important;
 }
 
-/* Smooth topbar + viewtabs slide when sidebar toggles */
-.monday-topbar, .monday-view-tabs {
-  transition: left 200ms var(--ease-out) !important;
-}
-
-/* Sidebar is always visible — topbar/viewtabs always start at sidebar-width */
-
 /* ═══════════════════════════════════════════════════════════════════════════
-   SIDEBAR — monday.com #1c1f3b dark navy
+   SIDEBAR
 ═══════════════════════════════════════════════════════════════════════════ */
-
 [data-testid="stSidebar"] {
   display: block !important;
   transform: translateX(0) !important;
   visibility: visible !important;
   opacity: 1 !important;
   position: fixed !important;
-  left: 0 !important;
-  top: 0 !important;
+  left: 0 !important; top: 0 !important;
   height: 100vh !important;
   z-index: 999 !important;
   background: var(--bg-surface) !important;
@@ -501,26 +471,25 @@ button[data-testid^="stBaseButton"]:disabled {
   min-width: var(--sidebar-width) !important;
   transition: width 200ms ease, transform 200ms ease !important;
 }
-
-/* Collapsed state: slide out */
-[data-testid="stSidebar"].sidebar-collapsed {
-  transform: translateX(calc(-1 * var(--sidebar-width))) !important;
-  width: 0 !important;
-  min-width: 0 !important;
-  overflow: hidden !important;
-}
-
 [data-testid="stSidebar"] > div,
 [data-testid="stSidebarContent"] {
   background: var(--bg-surface) !important;
 }
-
 [data-testid="stSidebar"] > div:first-child {
   width: var(--sidebar-width) !important;
   min-width: var(--sidebar-width) !important;
   max-width: var(--sidebar-width) !important;
   overflow-y: auto !important;
   height: 100vh !important;
+}
+
+/* ── Sidebar logo — full-width 60px ── */
+[data-testid="stSidebar"] img {
+  height: auto !important;
+  max-height: 60px !important;
+  width: 100% !important;
+  object-fit: contain !important;
+  object-position: left center !important;
 }
 
 [data-testid="stSidebar"] .stMarkdown p,
@@ -533,7 +502,7 @@ button[data-testid^="stBaseButton"]:disabled {
 [data-testid="stSidebar"] strong, [data-testid="stSidebar"] b { color: var(--text-primary) !important; }
 [data-testid="stSidebar"] hr { border-color: var(--border-subtle) !important; margin: 5px 0 !important; }
 
-/* Sidebar nav buttons — compact 32px rows, left-aligned */
+/* Sidebar nav buttons */
 [data-testid="stSidebar"] .stButton > button {
   background: transparent !important;
   border: none !important;
@@ -554,23 +523,14 @@ button[data-testid^="stBaseButton"]:disabled {
   color: var(--text-primary) !important;
 }
 
-/* ── Active nav item: marker div → sibling button highlight ── */
+/* Active nav item */
 [data-testid="stSidebar"] div:has(.sw-nav.sw-active) + div .stButton > button {
   background: rgba(26,183,56,0.16) !important;
   color: var(--text-primary) !important;
   font-weight: 500 !important;
 }
 
-/* ── Section header buttons — slightly heavier, spaced top ── */
-[data-testid="stSidebar"] div:has(.sw-sec) + div .stButton > button {
-  color: var(--text-secondary) !important;
-  font-weight: 500 !important;
-  height: 34px !important;
-  min-height: 34px !important;
-  margin-top: 2px !important;
-}
-
-/* ── Indented sub-items ── */
+/* Indented sub-items */
 [data-testid="stSidebar"] div:has(.sw-i1) + div .stButton > button {
   padding-left: 22px !important;
 }
@@ -581,16 +541,7 @@ button[data-testid^="stBaseButton"]:disabled {
   min-height: 30px !important;
 }
 
-/* Active + indented combinations */
-[data-testid="stSidebar"] div:has(.sw-nav.sw-active.sw-i1) + div .stButton > button {
-  padding-left: 22px !important;
-}
-[data-testid="stSidebar"] div:has(.sw-nav.sw-active.sw-i2) + div .stButton > button {
-  padding-left: 36px !important;
-  font-size: 12px !important;
-}
-
-/* Primary buttons in sidebar (Save) */
+/* Primary buttons in sidebar */
 [data-testid="stSidebar"] .stButton > button[kind="primary"] {
   background: linear-gradient(180deg,#1AB738 0%,#149A2E 100%) !important;
   color: #04140A !important;
@@ -603,12 +554,8 @@ button[data-testid^="stBaseButton"]:disabled {
 [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
   background: linear-gradient(180deg,#22D344 0%,#18B135 100%) !important;
 }
-[data-testid="stSidebar"] .stButton > button:disabled {
-  color: var(--text-disabled) !important; background: transparent !important; opacity: 1 !important;
-}
 [data-testid="stSidebar"] .stButton > button *,
-[data-testid="stSidebar"] button[data-testid^="stBaseButton"] *,
-[data-testid="stSidebar"] button[data-testid^="stBaseButton"] [data-testid="stMarkdownContainer"] {
+[data-testid="stSidebar"] button[data-testid^="stBaseButton"] * {
   background: transparent !important; background-color: transparent !important; color: inherit !important;
 }
 [data-testid="stSidebar"] .stTextInput > div > div > input {
@@ -626,243 +573,124 @@ button[data-testid^="stBaseButton"]:disabled {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FIXED TOPBAR — monday.com board header
+   FIXED TOPBAR
 ═══════════════════════════════════════════════════════════════════════════ */
 .monday-topbar {
-  position: fixed;
-  top: 0;
-  left: var(--sidebar-width);
-  right: 0;
+  position: fixed; top: 0; left: var(--sidebar-width); right: 0;
   height: var(--topbar-height);
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-default);
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  z-index: 999;
-  gap: 8px;
+  display: flex; align-items: center;
+  padding: 0 16px; z-index: 999; gap: 8px;
   font-family: 'Figtree', sans-serif;
   box-shadow: 0 1px 4px rgba(0,0,0,0.25);
 }
 .monday-board-icon {
-  width: 26px; height: 26px;
-  border-radius: 6px;
-  background: var(--green-dim);
-  border: 1px solid var(--border-accent);
+  width: 26px; height: 26px; border-radius: 6px;
+  background: var(--green-dim); border: 1px solid var(--border-accent);
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px;
-  flex-shrink: 0;
+  font-size: 13px; flex-shrink: 0;
 }
 .monday-board-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 280px;
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  letter-spacing: -0.01em; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 280px;
 }
 .monday-board-subtitle {
-  font-size: 11px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 11px; color: var(--text-muted);
+  white-space: nowrap; flex: 1; overflow: hidden; text-overflow: ellipsis;
 }
-.monday-topbar-divider {
-  width: 1px; height: 20px;
-  background: var(--border-default);
-  margin: 0 2px;
-  flex-shrink: 0;
-}
-.monday-topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: auto;
-}
+.monday-topbar-divider { width: 1px; height: 20px; background: var(--border-default); margin: 0 2px; flex-shrink: 0; }
+.monday-topbar-actions { display: flex; align-items: center; gap: 5px; margin-left: auto; }
 .monday-action-btn {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--border-default);
-  border-radius: 6px;
-  font-family: 'Figtree', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: transparent;
-  cursor: pointer;
+  height: 26px; padding: 0 10px;
+  border: 1px solid var(--border-default); border-radius: 6px;
+  font-family: 'Figtree', sans-serif; font-size: 12px; font-weight: 500;
+  color: var(--text-secondary); background: transparent; cursor: pointer;
   display: inline-flex; align-items: center; gap: 4px;
-  transition: all 100ms var(--ease-out);
-  white-space: nowrap;
-  text-decoration: none;
+  transition: all 100ms var(--ease-out); white-space: nowrap;
 }
-.monday-action-btn:hover {
-  background: var(--bg-overlay);
-  color: var(--text-primary);
-  border-color: rgba(255,255,255,0.20);
-}
-.monday-action-btn.green {
-  background: var(--green);
-  color: #04140A;
-  border-color: rgba(26,183,56,0.60);
-  font-weight: 600;
-}
+.monday-action-btn:hover { background: var(--bg-overlay); color: var(--text-primary); border-color: rgba(255,255,255,0.20); }
+.monday-action-btn.green { background: var(--green); color: #04140A; border-color: rgba(26,183,56,0.60); font-weight: 600; }
 .monday-action-btn.green:hover { background: var(--green-hover); }
-
 .monday-notif-btn {
-  position: relative;
-  width: 30px; height: 30px;
-  border-radius: 50%;
+  position: relative; width: 30px; height: 30px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: background 100ms;
-  flex-shrink: 0;
+  cursor: pointer; color: var(--text-secondary); transition: background 100ms; flex-shrink: 0;
 }
 .monday-notif-btn:hover { background: var(--bg-overlay); color: var(--text-primary); }
 .monday-notif-badge {
-  position: absolute;
-  top: 1px; right: 1px;
-  background: var(--danger);
-  color: white;
-  border-radius: 50%;
-  min-width: 15px; height: 15px;
-  font-size: 9px; font-weight: 700;
+  position: absolute; top: 1px; right: 1px;
+  background: var(--danger); color: white; border-radius: 50%;
+  min-width: 15px; height: 15px; font-size: 9px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
-  border: 2px solid var(--bg-surface);
-  line-height: 1;
-  padding: 0 2px;
+  border: 2px solid var(--bg-surface); line-height: 1; padding: 0 2px;
 }
-.monday-notif-badge.info { background: var(--info); }
-
 .monday-status-pill {
   display: inline-flex; align-items: center;
-  height: 18px; padding: 0 7px;
-  border-radius: 9px;
-  font-size: 10px; font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
+  height: 18px; padding: 0 7px; border-radius: 9px;
+  font-size: 10px; font-weight: 600; white-space: nowrap; flex-shrink: 0;
 }
-
 .monday-avatar {
-  width: 28px; height: 28px;
-  border-radius: 50%;
+  width: 28px; height: 28px; border-radius: 50%;
   background: linear-gradient(135deg, #1AB738, #0f8c28);
-  color: #04140A;
-  font-size: 10px; font-weight: 700;
+  color: #04140A; font-size: 10px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  border: 2px solid rgba(26,183,56,0.35);
-  letter-spacing: 0.02em;
+  cursor: pointer; flex-shrink: 0;
+  border: 2px solid rgba(26,183,56,0.35); letter-spacing: 0.02em;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   VIEW TABS BAR — monday.com views strip
+   VIEW TABS BAR
 ═══════════════════════════════════════════════════════════════════════════ */
 .monday-view-tabs {
-  position: fixed;
-  top: var(--topbar-height);
-  left: var(--sidebar-width);
-  right: 0;
+  position: fixed; top: var(--topbar-height); left: var(--sidebar-width); right: 0;
   height: var(--viewtab-height);
-  background: var(--bg-base);
-  border-bottom: 1px solid var(--border-default);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  z-index: 998;
-  gap: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  background: var(--bg-base); border-bottom: 1px solid var(--border-default);
+  display: flex; align-items: center; padding: 0 12px;
+  z-index: 998; gap: 0; overflow-x: auto; overflow-y: hidden;
   font-family: 'Figtree', sans-serif;
 }
 .monday-view-tabs::-webkit-scrollbar { height: 0; }
 .monday-view-tab {
   display: inline-flex; align-items: center; gap: 5px;
-  height: var(--viewtab-height);
-  padding: 0 12px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-  margin-bottom: 0;
-  white-space: nowrap;
-  transition: color 100ms, border-color 100ms;
-  user-select: none;
-  text-decoration: none;
-  flex-shrink: 0;
+  height: var(--viewtab-height); padding: 0 12px;
+  font-size: 13px; font-weight: 400; color: var(--text-muted);
+  cursor: pointer; border-bottom: 3px solid transparent;
+  white-space: nowrap; transition: color 100ms, border-color 100ms;
+  user-select: none; flex-shrink: 0;
 }
-.monday-view-tab:hover {
-  color: var(--text-secondary);
-  background: rgba(255,255,255,0.025);
-}
-.monday-view-tab.active {
-  color: var(--text-primary);
-  border-bottom-color: var(--green);
-  font-weight: 500;
-}
-.monday-view-tab-icon { font-size: 13px; opacity: 0.7; }
-.monday-view-tab-sep {
-  width: 1px; height: 16px;
-  background: var(--border-subtle);
-  margin: 0 4px;
-  flex-shrink: 0;
-}
+.monday-view-tab:hover { color: var(--text-secondary); background: rgba(255,255,255,0.025); }
+.monday-view-tab.active { color: var(--text-primary); border-bottom-color: var(--green); font-weight: 500; }
+.monday-view-tab-sep { width: 1px; height: 16px; background: var(--border-subtle); margin: 0 4px; flex-shrink: 0; }
 .monday-view-tab-add {
   display: inline-flex; align-items: center; justify-content: center;
   width: 28px; height: var(--viewtab-height);
-  color: var(--text-muted);
-  font-size: 18px; font-weight: 300;
-  cursor: pointer;
-  transition: color 100ms;
-  flex-shrink: 0;
+  color: var(--text-muted); font-size: 18px; cursor: pointer; transition: color 100ms;
 }
 .monday-view-tab-add:hover { color: var(--text-secondary); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   DIALOGS / MODALS
+   DIALOGS
 ═══════════════════════════════════════════════════════════════════════════ */
-[data-baseweb="dialog"], [data-baseweb="dialog"] > div,
-div[role="dialog"], div[role="dialog"] > div,
-[data-testid="stModal"], [data-testid="stModal"] > div {
+[data-baseweb="dialog"], div[role="dialog"] {
   background: var(--bg-elevated) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--border-default) !important;
   border-radius: 10px !important;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 60px rgba(0,0,0,0.60) !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.60) !important;
 }
-[data-baseweb="dialog"] [data-baseweb="block"] { background: var(--bg-elevated) !important; }
-[data-baseweb="dialog"] p, [data-baseweb="dialog"] span, [data-baseweb="dialog"] label,
-div[role="dialog"] p, div[role="dialog"] span, div[role="dialog"] label,
+[data-baseweb="dialog"] p, div[role="dialog"] p,
 div[role="dialog"] .stMarkdown p { color: var(--text-secondary) !important; font-size: 13px !important; }
-[data-baseweb="dialog"] input, [data-baseweb="dialog"] textarea,
-div[role="dialog"] input, div[role="dialog"] textarea {
-  background: var(--bg-input) !important; color: var(--text-primary) !important;
-  border: 1px solid var(--border-default) !important;
-}
 div[role="dialog"] .stButton > button {
   background: rgba(255,255,255,0.05) !important; color: var(--text-primary) !important;
-  border: 1px solid var(--border-default) !important; border-radius: 6px !important; font-size: 13px !important;
-}
-div[role="dialog"] .stButton > button:hover {
-  background: rgba(255,255,255,0.09) !important; border-color: rgba(255,255,255,0.22) !important;
+  border: 1px solid var(--border-default) !important; border-radius: 6px !important;
 }
 div[role="dialog"] button[data-testid="stBaseButton-primary"],
 div[role="dialog"] .stButton > button[kind="primary"] {
   background: linear-gradient(180deg,#1AB738 0%,#149A2E 100%) !important;
   border: 1px solid rgba(26,183,56,0.60) !important; color: #04140A !important; font-weight: 600 !important;
 }
-div[role="dialog"] button[data-testid^="stBaseButton"] *,
-div[role="dialog"] .stButton > button * { background: transparent !important; color: inherit !important; }
-div[role="dialog"] hr { border-color: var(--border-subtle) !important; }
-div[role="dialog"] .stCaption p { color: var(--text-muted) !important; }
-div[role="dialog"] label p,
-div[role="dialog"] [data-testid="stWidgetLabel"] p { color: var(--text-secondary) !important; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SCROLLBAR
@@ -880,6 +708,78 @@ div[role="dialog"] [data-testid="stWidgetLabel"] p { color: var(--text-secondary
   font-size: 10px !important; font-weight: 600 !important;
   text-transform: uppercase !important; letter-spacing: 0.12em !important;
   color: var(--text-muted) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FULL-WIDTH — eliminate dead zone
+═══════════════════════════════════════════════════════════════════════════ */
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stMainBlockContainer"],
+[data-testid="stMainBlockContainer"] > div:first-child {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+[data-testid="stHorizontalBlock"] { align-items: stretch !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CARD GRID — auto-fill, no dead zones
+═══════════════════════════════════════════════════════════════════════════ */
+.sw-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+.sw-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 16px 18px;
+  transition: border-color var(--motion-base) var(--ease-out),
+              box-shadow var(--motion-base) var(--ease-out);
+}
+.sw-card:hover {
+  border-color: rgba(255,255,255,0.16);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.30);
+}
+.sw-card-title {
+  font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;
+}
+.sw-card-meta { font-size: 12px; color: var(--text-muted); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VERTICAL STEPPER
+═══════════════════════════════════════════════════════════════════════════ */
+.sw-step-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0; border: 2px solid;
+  transition: all var(--motion-base) var(--ease-out);
+}
+.sw-step-dot.done  { background: var(--green); border-color: var(--green); color: #04140A; }
+.sw-step-dot.active {
+  background: var(--green-dim); border-color: var(--green); color: var(--green);
+  box-shadow: 0 0 0 4px var(--green-glow);
+}
+.sw-step-dot.pending {
+  background: var(--bg-elevated); border-color: var(--border-default); color: var(--text-muted);
+}
+
+/* Active step card — green accent border */
+[data-testid="stVerticalBlockBorderWrapper"].sw-step-active {
+  border-color: rgba(26,183,56,0.35) !important;
+  box-shadow: 0 0 0 1px rgba(26,183,56,0.15), 0 4px 12px rgba(0,0,0,0.30) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .block-container,
+  [data-testid="stMainBlockContainer"] {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
 }
 </style>
 """, unsafe_allow_html=True)

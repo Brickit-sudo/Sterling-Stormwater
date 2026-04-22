@@ -308,3 +308,107 @@ def test_connection() -> tuple[bool, str]:
         return True, f"Connected as {email}"
     except Exception as e:
         return False, str(e)
+
+
+def list_site_subfolders(root_folder_id: str) -> list[dict]:
+    """Returns [{id, name}] for each subfolder inside root_folder_id."""
+    service = get_drive_service()
+    if not service:
+        return []
+    q = f"'{root_folder_id}' in parents and trashed=false and mimeType='application/vnd.google-apps.folder'"
+    res = service.files().list(q=q, fields="files(id,name)", pageSize=200).execute()
+    return res.get("files", [])
+
+
+def _list_files_recursive(folder_id: str, service) -> list[dict]:
+    """Recursively list all non-folder files under folder_id, including nested subfolders."""
+    results = []
+    # Get files directly in this folder
+    q_files = f"'{folder_id}' in parents and trashed=false and mimeType!='application/vnd.google-apps.folder'"
+    token = None
+    while True:
+        kwargs = dict(q=q_files, fields="nextPageToken,files(id,name,mimeType,createdTime,modifiedTime,size,webViewLink)", pageSize=200)
+        if token:
+            kwargs["pageToken"] = token
+        res = service.files().list(**kwargs).execute()
+        results.extend(res.get("files", []))
+        token = res.get("nextPageToken")
+        if not token:
+            break
+    # Recurse into subfolders
+    q_folders = f"'{folder_id}' in parents and trashed=false and mimeType='application/vnd.google-apps.folder'"
+    sub_res = service.files().list(q=q_folders, fields="files(id,name)", pageSize=200).execute()
+    for sub in sub_res.get("files", []):
+        results.extend(_list_files_recursive(sub["id"], service))
+    return results
+
+
+def list_site_files(site_folder_id: str) -> list[dict]:
+    """Returns all non-folder files in a site folder and all its subfolders."""
+    service = get_drive_service()
+    if not service:
+        return []
+    return _list_files_recursive(site_folder_id, service)
+
+
+def _guess_type(name: str, ext: str) -> str:
+    n = name.lower()
+    if "invoice" in n:
+        return "invoice"
+    if "proposal" in n:
+        return "proposal"
+    if "maintenance" in n:
+        return "maintenance_report"
+    if "inspection" in n or "compliance" in n:
+        return "inspection_report"
+    if ext in ("jpg", "jpeg", "png"):
+        return "photo"
+    return "other"
+
+
+def crawl_drive_folder(root_folder_id: str) -> list[dict]:
+    """Walk root → site subfolders → all files (recursive). Returns flat list of file metadata dicts."""
+    records = []
+    for site in list_site_subfolders(root_folder_id):
+        for f in list_site_files(site["id"]):
+            name = f.get("name", "")
+            ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+            records.append({
+                "site_name":       site["name"],
+                "site_folder_id":  site["id"],
+                "file_id":         f["id"],
+                "file_name":       name,
+                "file_ext":        ext,
+                "guessed_type":    _guess_type(name, ext),
+                "mime":            f.get("mimeType", ""),
+                "created":         f.get("createdTime", ""),
+                "modified":        f.get("modifiedTime", ""),
+                "size_bytes":      f.get("size", ""),
+                "url":             f.get("webViewLink", ""),
+            })
+    return records
+
+
+def download_pdf_text(file_id: str) -> str:
+    """Download a PDF from Drive and extract its text with pdfplumber. Returns raw text string."""
+    import io
+    import pdfplumber
+    from googleapiclient.http import MediaIoBaseDownload
+
+    service = get_drive_service()
+    if not service:
+        return ""
+    request = service.files().get_media(fileId=file_id)
+    buf = io.BytesIO()
+    downloader = MediaIoBaseDownload(buf, request)
+    done = False
+    while not done:
+        _, done = downloader.next_chunk()
+    buf.seek(0)
+    pages = []
+    with pdfplumber.open(buf) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            if text:
+                pages.append(text)
+    return "\n\n".join(pages)

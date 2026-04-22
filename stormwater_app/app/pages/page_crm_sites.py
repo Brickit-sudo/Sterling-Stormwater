@@ -113,6 +113,7 @@ def render():
             result = _site_form("add")
             if result:
                 upsert_site(result)
+                from app.services.sheets_sync import sync_crm_sites; sync_crm_sites()
                 st.session_state["crm_site_add"] = False
                 st.toast("Site added!", icon="✅")
                 st.rerun()
@@ -253,6 +254,7 @@ def render():
                     result = _site_form(f"edit_{sid}", existing=site)
                     if result:
                         upsert_site(result)
+                        from app.services.sheets_sync import sync_crm_sites; sync_crm_sites()
                         st.session_state[edit_key] = False
                         st.toast("Site updated!", icon="✅")
                         st.rerun()

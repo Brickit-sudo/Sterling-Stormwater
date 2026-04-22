@@ -390,6 +390,66 @@ def render():
                     st.success(f"Report saved: `{output_path}`", icon="✅")
                     st.balloons()
 
+                    # ── Live sync to Sheets ──────────────────────────
+                    try:
+                        from app.services.sheets_sync import enqueue_row, enqueue_table
+                        from datetime import datetime, timezone
+                        _ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+                        # Inspection Log row
+                        enqueue_row("Inspection Log", {
+                            "site_name":        proj.meta.site_name,
+                            "site_address":     proj.meta.site_address,
+                            "client":           proj.meta.client_name,
+                            "report_type":      proj.meta.report_type,
+                            "report_number":    proj.meta.report_number,
+                            "inspection_date":  proj.meta.inspection_date,
+                            "report_date":      proj.meta.report_date,
+                            "prepared_by":      proj.meta.prepared_by,
+                            "weather":          proj.meta.weather_conditions,
+                            "next_service_date":proj.meta.next_service_date,
+                            "contract_number":  proj.meta.contract_number,
+                            "systems_count":    str(len(proj.systems)),
+                            "file_name":        output_filename,
+                            "exported_at":      _ts,
+                        })
+
+                        # Write-Ups rows (one per system)
+                        writeup_rows = []
+                        for sys_entry in proj.systems:
+                            wu = proj.write_ups.get(sys_entry.entry_id)
+                            writeup_rows.append({
+                                "site_name":              proj.meta.site_name,
+                                "report_date":            proj.meta.report_date,
+                                "system_type":            sys_entry.system_type,
+                                "system_id":              sys_entry.system_id,
+                                "condition":              sys_entry.condition,
+                                "findings":               wu.findings if wu else "",
+                                "recommendations":        wu.recommendations if wu else "",
+                                "maintenance_performed":  wu.maintenance_performed if wu else "",
+                                "post_service_condition": wu.post_service_condition if wu else "",
+                                "exported_at":            _ts,
+                            })
+                        if writeup_rows:
+                            enqueue_row("Write-Ups", writeup_rows[0])
+                            for wr in writeup_rows[1:]:
+                                enqueue_row("Write-Ups", wr)
+
+                        # Photos rows
+                        for ph in proj.photos:
+                            enqueue_row("Photos", {
+                                "site_name":   proj.meta.site_name,
+                                "report_date": proj.meta.report_date,
+                                "filename":    ph.filename,
+                                "system":      ph.system_label,
+                                "component":   ph.component,
+                                "caption":     ph.computed_caption() if hasattr(ph, "computed_caption") else "",
+                                "exported_at": _ts,
+                            })
+                    except Exception:
+                        pass  # Sheets sync is best-effort — never block export
+                    # ── End live sync ────────────────────────────────
+
                     docx_bytes = Path(output_path).read_bytes()
                     dl_col, drive_col = st.columns(2)
                     dl_col.download_button(

@@ -1,10 +1,13 @@
 """
 app/components/sidebar.py
-Sterling Stormwater sidebar — real st.button() per nav item (guaranteed reliable).
+Sterling Stormwater sidebar — refactored for flat grouped nav.
 
-The onclick-HTML-proxy approach was unreliable across Streamlit versions.
-This version uses native Streamlit widgets styled with CSS — the approach
-that was confirmed working before role-based changes were introduced.
+Changes from previous version:
+- Removed collapsible section toggles; replaced with _sub_label() dividers
+- Collapse button moved below logo as full-width strip
+- Logo rendered at 60px height filling sidebar width
+- Improved text contrast throughout
+- Sections always visible (no expand/collapse state needed)
 """
 
 from pathlib import Path
@@ -17,15 +20,13 @@ _FULLREPORT_PAGES = {"setup", "systems", "writeups", "export"}
 
 _SECTION_PAGES = {
     "crm":      {"crm_sites", "crm_clients", "crm_leads", "crm_prospects",
-                 "crm_jobs", "crm_comms", "calendar"},
-    "finance":  {"crm_invoices", "crm_quotes", "crm_svc_catalog"},
+                 "crm_jobs", "crm_comms", "calendar",
+                 "crm_invoices", "crm_quotes", "crm_svc_catalog"},
     "reports":  {"photosheet", "setup", "systems", "writeups", "export"},
-    "archive":  {"crm_files", "library", "bulk_import", "crm_import"},
+    "archive":  {"crm_files", "library", "bulk_import", "crm_import", "sync"},
     "insights": {"trends", "knowledge_base"},
     "settings": {"google_settings"},
 }
-
-_DEFAULT_OPEN = {"reports"}
 
 # Sections visible per role (None = all)
 _ROLE_SECTIONS: dict[str, set | None] = {
@@ -44,6 +45,20 @@ _ROLE_LABELS = {
 
 
 # ── Sub-components ────────────────────────────────────────────────────────────
+
+def _section_divider(label: str) -> None:
+    """Flat divider with label — replaces collapsible section headers."""
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:6px;'
+        f'padding:12px 14px 4px;">'
+        f'<span style="font-size:10px;font-weight:700;letter-spacing:0.10em;'
+        f'text-transform:uppercase;color:#4b4e69;'
+        f'font-family:\'JetBrains Mono\',monospace;white-space:nowrap">{label}</span>'
+        f'<div style="flex:1;height:1px;background:rgba(255,255,255,0.06)"></div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
 
 def _sub_label(text: str) -> None:
     st.markdown(
@@ -78,44 +93,6 @@ def _nav_item(page_key: str, icon: str, label: str, current: str) -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-def _section_header(section_key: str, icon: str, label: str, current: str) -> bool:
-    """Render a collapsible section header. Returns True if expanded."""
-    state_key = f"sidebar_{section_key}_open"
-
-    contains_current = current in _SECTION_PAGES.get(section_key, set())
-    if contains_current and not st.session_state.get(state_key, False):
-        st.session_state[state_key] = True
-
-    is_open = st.session_state.get(state_key, section_key in _DEFAULT_OPEN)
-    chevron = "▼" if is_open else "▶"
-    bg      = "rgba(26,183,56,0.08)" if is_open else "rgba(255,255,255,0.04)"
-    border  = "#1AB738" if is_open else "transparent"
-    color   = "#d5d8df" if is_open else "#9699a6"
-
-    st.markdown(
-        f'<div class="sidebar-section-{section_key}" style="'
-        f'background:{bg};border-left:3px solid {border};'
-        f'border-radius:0 6px 6px 0;margin:2px 2px 2px 0">',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<style>'
-        f'.sidebar-section-{section_key} + div button {{'
-        f'text-align:left !important;font-weight:600 !important;'
-        f'color:{color} !important;background:transparent !important;'
-        f'border:none !important;}}'
-        f'</style>',
-        unsafe_allow_html=True,
-    )
-    if st.button(f"{chevron}  {icon}  {label}", key=f"section_toggle_{section_key}",
-                 use_container_width=True):
-        st.session_state[state_key] = not is_open
-        st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    return is_open
-
-
 def _site_chip(meta) -> None:
     site   = meta.site_name   or "New Project"
     client = meta.client_name or ""
@@ -143,8 +120,6 @@ def _site_chip(meta) -> None:
 
 def render_sidebar():
     if st.session_state.get("sidebar_hidden"):
-        # Slide sidebar off-screen, collapse main margin to full width
-        # (expand button is rendered by app.py to avoid duplicate key)
         st.markdown(
             "<style>[data-testid='stSidebar']{"
             "transform:translateX(-230px)!important;"
@@ -164,69 +139,101 @@ def render_sidebar():
         def _allow(sec: str) -> bool:
             return allowed is None or sec in allowed
 
-        # ── Logo + collapse ───────────────────────────────────────────────
-        c_logo, c_btn = st.columns([4, 1])
-        with c_logo:
-            if LOGO_PATH.exists():
-                st.image(str(LOGO_PATH), use_container_width=True)
-        with c_btn:
-            if st.button("◀", key="sidebar_collapse_btn", help="Collapse sidebar"):
-                st.session_state["sidebar_hidden"] = True
-                st.rerun()
+        # ── Logo (full-width, 60px tall) ──────────────────────────────────────
+        if LOGO_PATH.exists():
+            st.markdown(
+                '<div style="padding:14px 12px 0;border-bottom:none">',
+                unsafe_allow_html=True,
+            )
+            st.image(str(LOGO_PATH), use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # ── Collapse strip below logo ─────────────────────────────────────────
+        st.markdown(
+            '<style>'
+            '/* Collapse button - full width strip */'
+            '[class*="sidebar_collapse_btn"] button {'
+            '  width:100%!important;'
+            '  border-radius:0!important;'
+            '  border-top:1px solid rgba(255,255,255,0.06)!important;'
+            '  border-left:none!important;border-right:none!important;border-bottom:none!important;'
+            '  background:transparent!important;'
+            '  color:#9699a6!important;'
+            '  font-size:11px!important;'
+            '  font-family:\'JetBrains Mono\',monospace!important;'
+            '  letter-spacing:0.06em!important;'
+            '  height:28px!important;min-height:28px!important;'
+            '  justify-content:flex-end!important;padding-right:10px!important;'
+            '  margin-bottom:4px!important;'
+            '}'
+            '[class*="sidebar_collapse_btn"] button:hover {'
+            '  background:rgba(255,255,255,0.05)!important;'
+            '  color:#e0e2ea!important;'
+            '}'
+            '</style>',
+            unsafe_allow_html=True,
+        )
+        if st.button("◀  COLLAPSE", key="sidebar_collapse_btn", use_container_width=True):
+            st.session_state["sidebar_hidden"] = True
+            st.rerun()
 
         _nav_rule()
-        _nav_item("home", "🏠", "Home", current)
-        _nav_item("map",  "🗺️", "Site Map", current)
+        _nav_item("home", "⬜", "Home",     current)
+        _nav_item("map",  "⬜", "Site Map", current)
         _nav_rule()
 
-        # ── CRM ───────────────────────────────────────────────────────────
-        if _allow("crm") and _section_header("crm", "👥", "CRM", current):
-            _nav_item("calendar",      "📅", "Calendar",       current)
-            _nav_item("crm_sites",     "🗄️", "Sites",          current)
-            _nav_item("crm_clients",   "👤", "Clients",        current)
-            _nav_item("crm_leads",     "🎯", "Leads",          current)
-            _nav_item("crm_prospects", "📋", "Prospects",      current)
-            _nav_item("crm_jobs",      "🔧", "Jobs",           current)
-            _nav_item("crm_comms",     "💬", "Communications", current)
+        # ── CRM ───────────────────────────────────────────────────────────────
+        if _allow("crm"):
+            _section_divider("CRM")
+            _nav_item("calendar",      "⬜", "Calendar",       current)
+            _nav_item("crm_sites",     "⬜", "Sites",          current)
+            _nav_item("crm_clients",   "⬜", "Clients",        current)
+            _nav_item("crm_leads",     "⬜", "Leads",          current)
+            _nav_item("crm_prospects", "⬜", "Prospects",      current)
+            _nav_item("crm_jobs",      "⬜", "Jobs",           current)
+            _nav_item("crm_comms",     "⬜", "Communications", current)
+            _section_divider("Finance")
+            _nav_item("crm_invoices",    "⬜", "Invoices",        current)
+            _nav_item("crm_quotes",      "⬜", "Quote Builder",   current)
+            _nav_item("crm_svc_catalog", "⬜", "Service Catalog", current)
 
-        # ── Finance ───────────────────────────────────────────────────────
-        if _allow("finance") and _section_header("finance", "💰", "Finance", current):
-            _nav_item("crm_invoices",    "🧾", "Invoices",        current)
-            _nav_item("crm_quotes",      "💰", "Quote Builder",   current)
-            _nav_item("crm_svc_catalog", "🔧", "Service Catalog", current)
-
-        # ── Reports ───────────────────────────────────────────────────────
-        if _allow("reports") and _section_header("reports", "📊", "Reports", current):
-            _nav_item("photosheet", "📷", "Photosheet", current)
+        # ── Reports ───────────────────────────────────────────────────────────
+        if _allow("reports"):
+            _section_divider("Reports")
+            _nav_item("photosheet", "⬜", "Photosheet", current)
             _sub_label("Full Report")
-            _nav_item("setup",    "⚙️",  "Setup",     current)
-            _nav_item("systems",  "🔧",  "Systems",   current)
-            _nav_item("writeups", "✏️",  "Write-Ups", current)
-            _nav_item("export",   "📤",  "Export",    current)
+            _nav_item("setup",    "⬜", "Setup",     current)
+            _nav_item("systems",  "⬜", "Systems",   current)
+            _nav_item("writeups", "⬜", "Write-Ups", current)
+            _nav_item("export",   "⬜", "Export",    current)
 
-        # ── Archive ───────────────────────────────────────────────────────
-        if _allow("archive") and _section_header("archive", "📁", "Archive", current):
-            _nav_item("crm_files",   "📁", "File Archive",   current)
-            _nav_item("library",     "📚", "Report Library", current)
-            _nav_item("bulk_import", "📥", "Bulk Import",    current)
-            _nav_item("crm_import",  "📥", "Import Data",    current)
+        # ── Archive ───────────────────────────────────────────────────────────
+        if _allow("archive"):
+            _section_divider("Archive")
+            _nav_item("crm_files",   "⬜", "File Archive",   current)
+            _nav_item("library",     "⬜", "Report Library", current)
+            _nav_item("bulk_import", "⬜", "Bulk Import",    current)
+            _nav_item("crm_import",  "⬜", "Import Data",    current)
+            _nav_item("sync",        "⬜", "Drive Sync",     current)
 
-        # ── Insights ──────────────────────────────────────────────────────
-        if _allow("insights") and _section_header("insights", "📈", "Insights", current):
-            _nav_item("trends",         "📈", "Site History",   current)
-            _nav_item("knowledge_base", "📊", "Knowledge Base", current)
+        # ── Insights ──────────────────────────────────────────────────────────
+        if _allow("insights"):
+            _section_divider("Insights")
+            _nav_item("trends",         "⬜", "Site History",   current)
+            _nav_item("knowledge_base", "⬜", "Knowledge Base", current)
 
-        # ── Settings ──────────────────────────────────────────────────────
-        if _allow("settings") and _section_header("settings", "⚙️", "Settings", current):
-            _nav_item("google_settings", "🔗", "Google Integration", current)
+        # ── Settings ──────────────────────────────────────────────────────────
+        if _allow("settings"):
+            _section_divider("Settings")
+            _nav_item("google_settings", "⬜", "Google Integration", current)
 
-        # ── Active project chip + Save/New (full report pages only) ───────
+        # ── Active project chip + Save/New ────────────────────────────────────
         if current in _FULLREPORT_PAGES:
             _site_chip(meta)
             _nav_rule()
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("💾  Save", use_container_width=True, type="primary"):
+                if st.button("Save", use_container_width=True, type="primary"):
                     save_project_json()
                     try:
                         from app.services.api_client import upsert_report
@@ -235,7 +242,7 @@ def render_sidebar():
                         pass
                     st.toast("Project saved", icon="✅")
             with col2:
-                if st.button("🔄  New", use_container_width=True):
+                if st.button("New", use_container_width=True):
                     from app.session import ProjectSession
                     st.session_state.project     = ProjectSession()
                     st.session_state.photo_bytes = {}
@@ -244,7 +251,7 @@ def render_sidebar():
 
         _nav_rule()
 
-        # ── Role indicator (owner-only switcher) ──────────────────────────
+        # ── Role indicator ────────────────────────────────────────────────────
         if role == "owner":
             role_options = list(_ROLE_LABELS.keys())
             new_role = st.selectbox(
