@@ -98,7 +98,12 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-/* Native Streamlit sidebar handles stMain offset via flexbox — no manual margin needed */
+/* Sidebar is position:fixed so stMain needs an explicit margin to not be overlapped.
+   Transition matches sidebar's own transition for smooth expand/collapse. */
+[data-testid="stMain"] {
+  margin-left: var(--sidebar-width) !important;
+  transition: margin-left 200ms ease !important;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LAYOUT — push content below fixed topbar + viewtabs
