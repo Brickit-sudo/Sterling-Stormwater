@@ -515,16 +515,16 @@ button[data-testid^="stBaseButton"]:disabled {
 }
 
 /* Sidebar nav buttons */
-[data-testid="stSidebar"] .stButton > button,
-[data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"] {
+[data-testid="stSidebar"] .stButton > button {
   background: transparent !important;
   border: none !important;
   color: #9699a6 !important;
   border-radius: 6px !important;
-  text-align: left !important;
+  display: flex !important;
+  flex-direction: row !important;
   justify-content: flex-start !important;
   align-items: center !important;
-  display: flex !important;
+  text-align: left !important;
   font-size: 13px !important;
   font-weight: 400 !important;
   padding: 7px 8px 7px 6px !important;
@@ -533,10 +533,14 @@ button[data-testid^="stBaseButton"]:disabled {
   transition: background var(--motion-fast) var(--ease-out),
               color var(--motion-fast) var(--ease-out) !important;
 }
-[data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"] > div,
-[data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"] p {
-  text-align: left !important;
+/* Force inner markdown container to fill width and sit left */
+[data-testid="stSidebar"] .stButton > button > *,
+[data-testid="stSidebar"] .stButton > button [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] .stButton > button p {
+  margin: 0 !important;
   width: 100% !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
   background: var(--bg-overlay) !important;
