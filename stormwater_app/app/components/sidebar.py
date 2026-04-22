@@ -3,13 +3,13 @@ app/components/sidebar.py
 Sterling Stormwater — monday.com-style sidebar.
 
 Nav is one HTML block (CSS+JS only — zero per-item Streamlit element overhead).
-Click routing: HTML onclick → JS → finds off-screen Streamlit button by text → .click()
-Off-screen buttons are real Streamlit widgets guaranteed to trigger reruns.
+Click routing: each nav item has an inline self-contained onclick that queries the
+sidebar DOM directly for the hidden off-screen Streamlit button and calls .click().
+No cross-iframe communication; no timing dependency.
 """
 
 from pathlib import Path
 import streamlit as st
-import streamlit.components.v1 as components
 from app.session import get_session, set_page, get_project, save_project_json
 
 LOGO_PATH = Path("assets/sterling_logo.png")
@@ -78,11 +78,24 @@ _NAV_CSS = """<style>
 </style>"""
 
 
+def _js_click(btn_text: str) -> str:
+    """Inline onclick JS: finds a hidden sidebar button by its <p> text and clicks it.
+    Self-contained — no dependency on any globally-defined function."""
+    # btn_text is embedded as a JS string literal; use &quot; for the CSS attribute quotes.
+    return (
+        "var _b=document.querySelectorAll('[data-testid=&quot;stSidebar&quot;] button');"
+        f"for(var _i=0;_i<_b.length;_i++){{"
+        f"var _p=_b[_i].querySelector('p');"
+        f"if((_p&&_p.textContent==='{btn_text}')||_b[_i].textContent.trim()==='{btn_text}')"
+        f"{{_b[_i].click();return;}}}}"
+    )
+
+
 def _row(page: str, icon: str, label: str, current: str, indent: int = 0) -> str:
     cls = "sw-row on" if current == page else "sw-row"
     if indent:
         cls += f" i{indent}"
-    return (f'<div class="{cls}" onclick="swN(\'{page}\')">'
+    return (f'<div class="{cls}" onclick="{_js_click(f"{_P}n:{page}")}">'
             f'<span class="sw-ico">{icon}</span><span>{label}</span></div>')
 
 
@@ -91,7 +104,7 @@ def _sec(key: str, icon: str, label: str, body: str, open_set: set) -> str:
     chev = "▾" if is_open else "▸"
     cls = "sw-body open" if is_open else "sw-body shut"
     return (
-        f'<div class="sw-row sec" onclick="swS(\'{key}\')">'
+        f'<div class="sw-row sec" onclick="{_js_click(f"{_P}s:{key}")}">'
         f'<span class="sw-chev">{chev}</span>'
         f'<span class="sw-ico">{icon}</span><span>{label}</span></div>'
         f'<div class="{cls}">{body}</div>'
@@ -163,27 +176,6 @@ def _build_nav(current: str, open_set: set, allowed: set | None = None) -> str:
     return f'{_NAV_CSS}<div class="sw">{body}</div>'
 
 
-# ── JS via component iframe ───────────────────────────────────────────────────
-# Defines swN/swS on window.parent; they find off-screen hidden Streamlit
-# buttons by their ZW-space-prefixed text content and call .click().
-
-_COMM_JS = f"""<script>
-(function(){{
-  var par = window.parent;
-  var P = '{_P}';
-  function click(txt) {{
-    var btns = par.document.querySelectorAll('[data-testid="stSidebar"] button');
-    for (var i = 0; i < btns.length; i++) {{
-      var p = btns[i].querySelector('p');
-      if (p && p.textContent === txt) {{ btns[i].click(); return; }}
-    }}
-  }}
-  par.swN = function(page) {{ click(P + 'n:' + page); }};
-  par.swS = function(key)  {{ click(P + 's:' + key);  }};
-}})();
-</script>"""
-
-
 # ── Sidebar chrome CSS ────────────────────────────────────────────────────────
 
 _CHROME_CSS = """<style>
@@ -191,11 +183,6 @@ _CHROME_CSS = """<style>
 [data-testid="stSidebar"] [data-testid="stElementContainer"],
 [data-testid="stSidebar"] .element-container{
   margin-top:0!important;margin-bottom:0!important}
-/* Hide the JS injector iframe */
-[data-testid="stSidebar"] iframe,
-[data-testid="stSidebar"] [data-testid="stCustomComponentV1"]{
-  height:0!important;min-height:0!important;border:none!important;
-  overflow:hidden!important;display:block!important;margin:0!important}
 /* Hide hidden nav button zone — positioned off-screen, zero size */
 [data-testid="stSidebar"] div:has(#sw-hb-zone) ~ div .stButton>button{
   position:fixed!important;left:-9999px!important;top:-9999px!important;
@@ -272,9 +259,6 @@ def render_sidebar():
 
         # ── Nav HTML (one markdown block, no per-item widgets) ────────────
         st.markdown(_build_nav(current, open_set, allowed), unsafe_allow_html=True)
-
-        # ── JS injector via component iframe ─────────────────────────────
-        components.html(_COMM_JS, height=0, scrolling=False)
 
         # ── Active project chip + Save/New (full report only) ─────────────
         if current in _FULLREPORT_PAGES:
