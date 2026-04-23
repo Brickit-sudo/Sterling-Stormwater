@@ -531,14 +531,35 @@ button[data-testid^="stBaseButton"]:disabled {
   color: #e8f0f3 !important;
 }
 
-/* ── Nav trigger buttons: JS clicks these; take no visual space ── */
+/* ── Nav buttons — styled as flat nav items ── */
 [data-testid="stSidebar"] [class*="st-key-nav_"] {
-  height: 0 !important;
-  min-height: 0 !important;
-  max-height: 0 !important;
-  overflow: hidden !important;
   padding: 0 !important;
   margin: 0 !important;
+}
+[data-testid="stSidebar"] [class*="st-key-nav_"] button {
+  background: transparent !important;
+  border: none !important;
+  border-left: 3px solid transparent !important;
+  border-radius: 0 6px 6px 0 !important;
+  color: #c5dae2 !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  font-family: 'Figtree', sans-serif !important;
+  justify-content: flex-start !important;
+  padding: 7px 12px 7px 14px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  margin: 1px 2px 1px 0 !important;
+  box-shadow: none !important;
+  transition: all 100ms !important;
+}
+[data-testid="stSidebar"] [class*="st-key-nav_"] button > div {
+  justify-content: flex-start !important;
+}
+[data-testid="stSidebar"] [class*="st-key-nav_"] button:hover {
+  background: rgba(255,255,255,0.04) !important;
+  color: #e8f0f3 !important;
+  border-left-color: rgba(26,183,56,0.35) !important;
 }
 
 /* Primary buttons in sidebar (Save/New) */
