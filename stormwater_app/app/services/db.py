@@ -94,6 +94,13 @@ def _init_schema(c: sqlite3.Connection) -> None:
             key   TEXT PRIMARY KEY,
             value TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS user_google_config (
+            user_email  TEXT PRIMARY KEY,
+            creds_json  TEXT,
+            config_json TEXT DEFAULT '{}',
+            updated_at  TEXT DEFAULT (datetime('now'))
+        );
     """)
     c.commit()
 

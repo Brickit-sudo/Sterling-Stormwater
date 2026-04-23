@@ -128,7 +128,28 @@ def init_crm_tables() -> None:
         CREATE INDEX IF NOT EXISTS idx_crm_comm_created ON crm_communications(created_at DESC);
     """)
     c.commit()
+    _migrate_crm_columns(c)
     _seed_if_empty(c)
+
+
+def _migrate_crm_columns(c: sqlite3.Connection) -> None:
+    """Idempotent: add new columns to CRM tables using PRAGMA checks, not exception swallowing."""
+    needed = {
+        "crm_sites": [
+            ("last_inspection_date", "TEXT"),
+            ("next_service_date",    "TEXT"),
+        ],
+        "crm_jobs": [
+            ("report_id",       "TEXT"),
+            ("completed_date",  "TEXT"),
+        ],
+    }
+    for table, cols in needed.items():
+        existing = {row[1] for row in c.execute(f"PRAGMA table_info({table})")}
+        for col_name, col_type in cols:
+            if col_name not in existing:
+                c.execute(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}")
+    c.commit()
 
 
 def _seed_if_empty(c: sqlite3.Connection) -> None:
