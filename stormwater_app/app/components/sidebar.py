@@ -1,13 +1,6 @@
 """
 app/components/sidebar.py
-Sterling Stormwater sidebar — refactored for flat grouped nav.
-
-Changes from previous version:
-- Removed collapsible section toggles; replaced with _sub_label() dividers
-- Collapse button moved below logo as full-width strip
-- Logo rendered at 60px height filling sidebar width
-- Improved text contrast throughout
-- Sections always visible (no expand/collapse state needed)
+Sterling Stormwater sidebar — flat SVG icon nav.
 """
 
 from pathlib import Path
@@ -20,19 +13,19 @@ _FULLREPORT_PAGES = {"setup", "systems", "writeups", "export"}
 
 _SECTION_PAGES = {
     "crm":      {"crm_sites", "crm_clients", "crm_leads", "crm_prospects",
-                 "crm_jobs", "crm_comms", "calendar",
-                 "crm_invoices", "crm_quotes", "crm_svc_catalog"},
+                 "crm_jobs", "crm_comms", "calendar"},
+    "finance":  {"crm_invoices", "crm_quotes", "crm_svc_catalog"},
     "reports":  {"photosheet", "setup", "systems", "writeups", "export"},
-    "archive":  {"crm_files", "library", "bulk_import", "crm_import", "sync"},
+    "data":     {"crm_files", "library", "bulk_import", "crm_import", "sync"},
     "insights": {"trends", "knowledge_base"},
-    "settings": {"google_settings"},
+    "admin":    {"google_settings"},
 }
 
 # Sections visible per role (None = all)
 _ROLE_SECTIONS: dict[str, set | None] = {
     "owner":      None,
-    "ops":        {"crm", "reports", "archive", "settings"},
-    "compliance": {"crm", "reports", "archive", "insights", "settings"},
+    "ops":        {"crm", "finance", "reports", "data", "admin"},
+    "compliance": {"crm", "finance", "reports", "data", "insights"},
     "worker":     {"reports"},
 }
 
@@ -44,6 +37,45 @@ _ROLE_LABELS = {
 }
 
 
+# ── SVG icon system ───────────────────────────────────────────────────────────
+
+_ICON_PATHS = {
+    "home":      ["M2 7.5L8 2l6 5.5V14H10v-3.5H6V14H2V7.5z"],
+    "map":       ["M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 3.75 4.5 8.5 4.5 8.5S12.5 9.75 12.5 6C12.5 3.51 10.49 1.5 8 1.5z", "M8 7.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"],
+    "calendar":  ["M1.5 3.5h13v11h-13z", "M5 1.5v4", "M11 1.5v4", "M1.5 7.5h13"],
+    "building":  ["M2 14V5l6-3 6 3v9", "M6 14v-4h4v4", "M5.5 6.5h1", "M5.5 9h1", "M9.5 6.5h1", "M9.5 9h1"],
+    "person":    ["M8 8a3 3 0 100-6 3 3 0 000 6z", "M2 14.5c0-3.31 2.69-6 6-6s6 2.69 6 6"],
+    "leads":     ["M2 8h12", "M9 3l5 5-5 5"],
+    "prospects": ["M14 7A6 6 0 112 7a6 6 0 0112 0z", "M10 7H8", "M8 5v4"],
+    "jobs":      ["M2 5h12v9H2z", "M5 5V3a1 1 0 011-1h4a1 1 0 011 1v2", "M6 9h4", "M8 7.5v3"],
+    "comms":     ["M2 2.5h9v7H8l-3 2.5V9.5H2z", "M11 5h3v5h-1.5l-2 2V10h.5"],
+    "invoice":   ["M3 2h10v12H3z", "M6 5.5h4", "M6 8h4", "M6 10.5h3"],
+    "quote":     ["M2 2h5v5l-2 3H3L5 7H2V2z", "M9 2h5v5l-2 3h-2l2-3H9V2z"],
+    "catalog":   ["M2 3h12v2H2z", "M2 7h12v2H2z", "M2 11h12v2H2z"],
+    "photo":     ["M1.5 4.5A1 1 0 012.5 3.5h11a1 1 0 011 1V12a1 1 0 01-1 1H2.5a1 1 0 01-1-1V4.5z", "M5.5 7.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z", "M1.5 10.5l4-3 3 2.5 2.5-2 3 2.5"],
+    "newReport": ["M3.5 2h7l2.5 2.5V14h-9.5V2z", "M10.5 2v3h2.5", "M8 6.5v5", "M5.5 9h5"],
+    "gear":      ["M8 5.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z", "M8 1v1.5", "M8 13.5V15", "M1 8h1.5", "M13.5 8H15", "M2.636 2.636l1.06 1.06", "M12.304 12.304l1.06 1.06", "M13.364 2.636l-1.06 1.06", "M3.696 12.304l-1.06 1.06"],
+    "download":  ["M8 2v9", "M4.5 7.5L8 11l3.5-3.5", "M1.5 13.5h13"],
+    "reports":   ["M3.5 2h7l2.5 2.5V14h-9.5V2z", "M10.5 2v3h2.5", "M6 6.5h4", "M6 9h4", "M6 11.5h3"],
+    "folder":    ["M2 4.5l2.5-2.5H7l1.5 1.5H14V13H2V4.5z"],
+    "import":    ["M8 2v9", "M4.5 7.5L8 11l3.5-3.5", "M2 14h12", "M2 2h2v9H2z", "M12 2h2v9h-2z"],
+    "sync":      ["M12.5 4A5.5 5.5 0 003 8", "M3.5 12A5.5 5.5 0 0013 8", "M12.5 4l-2-2", "M12.5 4l2-2", "M3.5 12l-2 2", "M3.5 12l2 2"],
+    "trend":     ["M1.5 12.5l4-4 3 2.5 4-5 2 2"],
+    "knowledge": ["M3 2h10v12H3z", "M6 5h4", "M6 7.5h4", "M6 10h4", "M6 12.5h3"],
+}
+
+
+def _svg_icon(name: str, size: int = 15, opacity: float = 0.65) -> str:
+    paths = _ICON_PATHS.get(name, [])
+    path_els = "".join(f'<path d="{p}"/>' for p in paths)
+    return (
+        f'<svg width="{size}" height="{size}" viewBox="0 0 16 16" fill="none" '
+        f'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" '
+        f'stroke-linejoin="round" style="opacity:{opacity};flex-shrink:0;display:inline-block;vertical-align:middle">'
+        f'{path_els}</svg>'
+    )
+
+
 # ── Sub-components ────────────────────────────────────────────────────────────
 
 def _section_divider(label: str) -> None:
@@ -52,9 +84,9 @@ def _section_divider(label: str) -> None:
         f'<div style="display:flex;align-items:center;gap:6px;'
         f'padding:12px 14px 4px;">'
         f'<span style="font-size:10px;font-weight:700;letter-spacing:0.10em;'
-        f'text-transform:uppercase;color:#4b4e69;'
+        f'text-transform:uppercase;color:#3d6070;'
         f'font-family:\'JetBrains Mono\',monospace;white-space:nowrap">{label}</span>'
-        f'<div style="flex:1;height:1px;background:rgba(255,255,255,0.06)"></div>'
+        f'<div style="flex:1;height:1px;background:#1a3545"></div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -62,7 +94,7 @@ def _section_divider(label: str) -> None:
 
 def _sub_label(text: str) -> None:
     st.markdown(
-        f'<div style="font-size:10px;color:#4b4e69;padding:6px 4px 1px 8px;'
+        f'<div style="font-size:10px;color:#3d6070;padding:6px 4px 1px 8px;'
         f'font-weight:600;letter-spacing:0.09em;text-transform:uppercase'
         f';user-select:none">{text}</div>',
         unsafe_allow_html=True,
@@ -76,22 +108,28 @@ def _nav_rule() -> None:
     )
 
 
-def _nav_item(page_key: str, icon: str, label: str, current: str) -> None:
+def _nav_item(page_key: str, icon_name: str, label: str, current: str) -> None:
     is_active = current == page_key
-    if is_active:
-        st.markdown(
-            '<div style="'
-            'background:linear-gradient(90deg,rgba(26,183,56,0.18) 0%,rgba(26,183,56,0.05) 100%);'
-            'border-left:3px solid #1AB738;'
-            'border-radius:0 6px 6px 0;margin:1px 2px 1px 0">'
-            '<span class="sw-nav sw-active" style="display:none"></span>',
-            unsafe_allow_html=True,
-        )
-    if st.button(f"{icon}  {label}", key=f"nav_{page_key}", use_container_width=True):
+    icon_html = _svg_icon(icon_name, size=14, opacity=1.0 if is_active else 0.65)
+    bg = "linear-gradient(90deg,rgba(26,183,56,0.20) 0%,rgba(26,183,56,0.04) 100%)" if is_active else "transparent"
+    border = "3px solid #1AB738" if is_active else "3px solid transparent"
+    color = "#e8f0f3" if is_active else "#c5dae2"
+    fw = "500" if is_active else "400"
+
+    st.markdown(
+        f'<div data-navkey="{page_key}" style="display:flex;align-items:center;gap:10px;'
+        f'padding:7px 12px 7px 9px;height:34px;background:{bg};border-left:{border};'
+        f'border-radius:0 6px 6px 0;margin:1px 2px 1px 0;color:{color};'
+        f'font-size:13px;font-weight:{fw};font-family:\'Figtree\',sans-serif;">'
+        f'{icon_html}'
+        f'<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{label}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    key = f"nav_{page_key}"
+    if st.button("", key=key, use_container_width=True):
         set_page(page_key)
         st.rerun()
-    if is_active:
-        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _site_chip(meta) -> None:
@@ -178,55 +216,101 @@ def render_sidebar():
             st.session_state["sidebar_hidden"] = True
             st.rerun()
 
-        _nav_rule()
-        _nav_item("home", "⌂", "Home",     current)
-        _nav_item("map",  "◎", "Site Map", current)
-        _nav_rule()
+        # ── Nav: single HTML block + JS-wired hidden buttons ─────────────────
+        def _ni(key: str, icon: str, lbl: str) -> str:
+            a = current == key
+            return (
+                f'<div class="sw-nv" data-navkey="{key}" style="display:flex;align-items:center;'
+                f'gap:10px;padding:7px 12px 7px 9px;height:34px;cursor:pointer;box-sizing:border-box;'
+                f'border-left:{"3px solid #1AB738" if a else "3px solid transparent"};'
+                f'background:{"linear-gradient(90deg,rgba(26,183,56,.18) 0%,rgba(26,183,56,.18) 35%,rgba(26,183,56,.04) 100%)" if a else "transparent"};'
+                f'border-radius:0 6px 6px 0;margin:1px 2px 1px 0;'
+                f'color:{"#e8f0f3" if a else "#c5dae2"};'
+                f'font-size:13px;font-weight:{"500" if a else "400"};font-family:Figtree,sans-serif">'
+                f'{_svg_icon(icon, 14, 1.0 if a else 0.65)}'
+                f'<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{lbl}</span>'
+                f'</div>'
+            )
 
-        # ── CRM ───────────────────────────────────────────────────────────────
+        def _nd(lbl: str) -> str:
+            return (
+                f'<div style="display:flex;align-items:center;gap:8px;padding:16px 8px 6px 8px">'
+                f'<span style="font-size:11px;font-weight:700;letter-spacing:.11em;'
+                f'text-transform:uppercase;color:#5ad4a0;'
+                f'font-family:\'JetBrains Mono\',monospace;white-space:nowrap">▪ {lbl}</span>'
+                f'<div style="flex:1;height:1px;background:rgba(90,212,160,0.22)"></div></div>'
+            )
+
+        parts: list[str] = []
+        nav_keys: list[str] = []
+
+        def _add(key: str, icon: str, lbl: str) -> None:
+            parts.append(_ni(key, icon, lbl))
+            nav_keys.append(key)
+
+        _add("home", "home", "Home")
+        _add("map",  "map",  "Site Map")
+
         if _allow("crm"):
-            _section_divider("CRM")
-            _nav_item("calendar",      "⊡", "Calendar",       current)
-            _nav_item("crm_sites",     "⊞", "Sites",          current)
-            _nav_item("crm_clients",   "◯", "Clients",        current)
-            _nav_item("crm_leads",     "→", "Leads",          current)
-            _nav_item("crm_prospects", "⊛", "Prospects",      current)
-            _nav_item("crm_jobs",      "⊓", "Jobs",           current)
-            _nav_item("crm_comms",     "◌", "Communications", current)
-            _section_divider("Finance")
-            _nav_item("crm_invoices",    "▭", "Invoices",        current)
-            _nav_item("crm_quotes",      "⊘", "Quote Builder",   current)
-            _nav_item("crm_svc_catalog", "☰", "Service Catalog", current)
+            parts.append(_nd("Pipeline"))
+            _add("calendar",      "calendar",  "Calendar")
+            _add("crm_sites",     "building",  "Sites")
+            _add("crm_clients",   "person",    "Clients")
+            _add("crm_jobs",      "jobs",      "Jobs")
+            _add("crm_leads",     "leads",     "Leads")
+            _add("crm_prospects", "prospects", "Prospects")
+            _add("crm_comms",     "comms",     "Communications")
 
-        # ── Reports ───────────────────────────────────────────────────────────
+        if _allow("finance"):
+            parts.append(_nd("Finance"))
+            _add("crm_invoices",    "invoice", "Invoices")
+            _add("crm_quotes",      "quote",   "Quote Builder")
+            _add("crm_svc_catalog", "catalog", "Service Catalog")
+
         if _allow("reports"):
-            _section_divider("Reports")
-            _nav_item("photosheet", "⊠", "Photosheet", current)
-            _sub_label("Full Report")
-            _nav_item("setup",    "⊙", "Setup",     current)
-            _nav_item("systems",  "⊕", "Systems",   current)
-            _nav_item("writeups", "▤", "Write-Ups", current)
-            _nav_item("export",   "↓", "Export",    current)
+            parts.append(_nd("Field Reports"))
+            _add("photosheet", "photo",     "Photosheet")
+            _add("setup",      "newReport", "Report Setup")
+            _add("systems",    "gear",      "Systems")
+            _add("writeups",   "knowledge", "Write-Ups")
+            _add("export",     "download",  "Export")
 
-        # ── Archive ───────────────────────────────────────────────────────────
-        if _allow("archive"):
-            _section_divider("Archive")
-            _nav_item("crm_files",   "□", "File Archive",   current)
-            _nav_item("library",     "⊟", "Report Library", current)
-            _nav_item("bulk_import", "⇩", "Bulk Import",    current)
-            _nav_item("crm_import",  "←", "Import Data",    current)
-            _nav_item("sync",        "↺", "Drive Sync",     current)
+        if _allow("data"):
+            parts.append(_nd("Data"))
+            _add("crm_files",   "folder",  "File Archive")
+            _add("library",     "reports", "Report Library")
+            _add("bulk_import", "import",  "Bulk Import")
+            _add("crm_import",  "import",  "CRM Import")
+            _add("sync",        "sync",    "Drive Sync")
 
-        # ── Insights ──────────────────────────────────────────────────────────
         if _allow("insights"):
-            _section_divider("Insights")
-            _nav_item("trends",         "↗", "Site History",   current)
-            _nav_item("knowledge_base", "◉", "Knowledge Base", current)
+            parts.append(_nd("Insights"))
+            _add("trends",         "trend",     "Site History")
+            _add("knowledge_base", "knowledge", "Knowledge Base")
 
-        # ── Settings ──────────────────────────────────────────────────────────
-        if _allow("settings"):
-            _section_divider("Settings")
-            _nav_item("google_settings", "⊗", "Google Integration", current)
+        if _allow("admin"):
+            parts.append(_nd("Admin"))
+            _add("google_settings", "gear", "Google Integration")
+
+        _NAV_CLICK = (
+            "var i=event.target.closest('[data-navkey]');"
+            "if(!i)return;"
+            "var k=i.dataset.navkey;"
+            "var c=document.querySelector('[class*=st-key-nav_'+k+']');"
+            "if(c){var b=c.querySelector('button');if(b)b.click();}"
+        )
+        st.markdown(
+            f'<div onclick="{_NAV_CLICK}" style="padding:6px 0">'
+            + "".join(parts)
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+
+        # Hidden Streamlit trigger buttons — swNav() clicks these via JS
+        for _pk in nav_keys:
+            if st.button("", key=f"nav_{_pk}"):
+                set_page(_pk)
+                st.rerun()
 
         # ── Active project chip + Save/New ────────────────────────────────────
         if current in _FULLREPORT_PAGES:
@@ -268,14 +352,18 @@ def render_sidebar():
                 st.rerun()
         else:
             st.markdown(
-                f'<div style="font-size:11px;color:#6e6f8f;text-align:center;'
-                f'padding:2px 0">{_ROLE_LABELS.get(role, role)}</div>',
+                f'<div style="text-align:center;padding:4px 0 2px">'
+                f'<div style="font-size:9px;font-weight:700;letter-spacing:.10em;'
+                f'text-transform:uppercase;color:#3d6070;'
+                f'font-family:\'JetBrains Mono\',monospace;margin-bottom:2px">Role</div>'
+                f'<div style="font-size:11px;color:#8aabb8">{_ROLE_LABELS.get(role, role)}</div>'
+                f'</div>',
                 unsafe_allow_html=True,
             )
 
         st.markdown(
             '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;'
-            'color:#4b4e69;text-align:center;padding:6px 0 4px;letter-spacing:.06em">'
+            'color:#3d6070;text-align:center;padding:6px 0 4px;letter-spacing:.06em">'
             'Sterling Reports v1.0</div>',
             unsafe_allow_html=True,
         )
