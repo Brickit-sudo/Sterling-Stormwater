@@ -269,51 +269,89 @@ def render_map():
     show_subs     = tc5.checkbox("🟠 Submittals",  value=True,  key="map_subs")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Build map ─────────────────────────────────────────────────────────────
-    layers: list = []
+    # ── Build map (Leaflet + ESRI satellite) ──────────────────────────────────
+    import json, random as _rnd
+
+    _SITE_HEX = {"Active": "#1ab738", "Inactive": "#9699a6", "On Hold": "#ffcb00"}
+    _JOB_HEX  = {
+        "Need to Schedule": "#e2445c", "Scheduled": "#ffcb00",
+        "Report in Progress": "#579bfc", "Ready for Review": "#a25ddc",
+        "Complete": "#00c875",
+    }
+
+    site_pts, job_pts, sub_pts = [], [], []
     sites_by_id = {s["site_id"]: s for s in sites_with_coords}
 
-    layers += _site_layers(sites_with_coords, show_active, show_inactive, show_hold)
+    for s in sites_with_coords:
+        sv = s.get("status", "Active") or "Active"
+        if sv == "Active"   and not show_active:   continue
+        if sv == "Inactive" and not show_inactive: continue
+        if sv == "On Hold"  and not show_hold:     continue
+        site_pts.append({"lat": s["lat"], "lng": s["lng"],
+                         "name": s.get("name",""), "city": s.get("city",""),
+                         "state": s.get("state",""), "status": sv,
+                         "color": _SITE_HEX.get(sv, "#579bfc")})
+
     if show_jobs:
-        layers += _job_layer(sites_by_id, all_jobs)
+        for j in all_jobs:
+            site = sites_by_id.get(j.get("site_id"))
+            if not site or not site.get("lat"): continue
+            rng = _rnd.Random(j.get("job_id",""))
+            job_pts.append({"lat": site["lat"] + rng.uniform(-0.005,0.005),
+                            "lng": site["lng"] + rng.uniform(-0.005,0.005),
+                            "name": j.get("job_site",""), "status": j.get("job_status",""),
+                            "color": _JOB_HEX.get(j.get("job_status",""), "#579bfc")})
+
     if show_subs:
-        layers += _submittal_layer(sites_with_coords)
+        td = datetime.date.today().isoformat()
+        sub_pts = [{"lat": s["lat"], "lng": s["lng"], "name": s.get("name","")}
+                   for s in sites_with_coords
+                   if s.get("submittal_due_date") and s["submittal_due_date"] >= td]
 
-    view = pdk.ViewState(
-        latitude=42.8,
-        longitude=-72.5,
-        zoom=6.2,
-        pitch=0,
-        bearing=0,
-    )
-
-    deck = pdk.Deck(
-        layers=layers,
-        initial_view_state=view,
-        map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-        tooltip={
-            "html": (
-                "<div style='font-family:system-ui;font-size:12px;padding:4px 6px'>"
-                "<b>{name}</b><br/>{city}, {state}<br/>"
-                "<span style='color:#1AB738'>{status}</span>"
-                "</div>"
-            ),
-            "style": {
-                "background": "#1a1b2e",
-                "border": "1px solid rgba(255,255,255,0.12)",
-                "border-radius": "6px",
-                "color": "#d5d8df",
-            },
-        },
-    )
+    map_html = """<!DOCTYPE html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>html,body{margin:0;padding:0;height:100%;background:#06141C}
+#map{width:100%;height:500px}
+.sw-tip{background:#0d1f29!important;border:1px solid rgba(255,255,255,0.12)!important;
+border-radius:6px!important;color:#d5d8df!important;font-family:system-ui!important;
+font-size:12px!important;padding:5px 9px!important;box-shadow:0 4px 16px rgba(0,0,0,.5)!important}
+.leaflet-tooltip.sw-tip::before{display:none}
+.leaflet-control-attribution{background:rgba(10,26,34,0.85)!important;color:#3d6070!important;font-size:10px!important}
+.leaflet-control-attribution a{color:#4a9ebe!important}
+</style></head><body><div id="map"></div><script>
+var map=L.map('map',{zoomControl:true}).setView([42.8,-72.5],7);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+{maxZoom:19,attribution:'&copy; Esri &mdash; Earthstar Geographics'}).addTo(map);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+{maxZoom:19,opacity:0.75}).addTo(map);
+""" + f"""
+var sites={json.dumps(site_pts)};
+var jobs={json.dumps(job_pts)};
+var subs={json.dumps(sub_pts)};
+""" + """
+sites.forEach(function(s){
+  L.circleMarker([s.lat,s.lng],{radius:11,color:s.color,weight:0,fillColor:s.color,fillOpacity:0.18}).addTo(map);
+  L.circleMarker([s.lat,s.lng],{radius:5,color:'#fff',weight:1.5,fillColor:s.color,fillOpacity:0.92})
+   .bindTooltip('<b>'+s.name+'</b><br>'+s.city+', '+s.state+'<br><span style="color:'+s.color+'">'+s.status+'</span>',
+     {className:'sw-tip',sticky:true}).addTo(map);
+});
+jobs.forEach(function(j){
+  L.circleMarker([j.lat,j.lng],{radius:4,color:'#fff',weight:1,fillColor:j.color,fillOpacity:0.88})
+   .bindTooltip('<b>'+j.name+'</b><br>'+j.status,{className:'sw-tip',sticky:true}).addTo(map);
+});
+subs.forEach(function(s){
+  L.circleMarker([s.lat,s.lng],{radius:13,color:'#fd7e14',weight:2,fillColor:'#fd7e14',fillOpacity:0.18}).addTo(map);
+});
+</script></body></html>"""
 
     if sites_with_coords:
-        st.pydeck_chart(deck, use_container_width=True, height=500)
+        st.components.v1.html(map_html, height=505)
         geocoded_pct = int(len(sites_with_coords) / max(1, stats.get("sites", 1)) * 100)
         st.markdown(
-            f'<div style="font-size:10px;color:#4b4e69;text-align:right;margin-top:2px">'
+            f'<div style="font-size:10px;color:#3d6070;text-align:right;margin-top:2px">'
             f'{len(sites_with_coords)} of {stats.get("sites", 0)} sites mapped '
-            f'({geocoded_pct}%) · CartoDB Dark Matter</div>',
+            f'({geocoded_pct}%) · Tiles © Esri — Earthstar Geographics</div>',
             unsafe_allow_html=True,
         )
     else:
@@ -430,7 +468,7 @@ def render_map():
                              [h1, h2, h3, h4, h5]):
             col.markdown(
                 f'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.10em;'
-                f'color:#4b4e69;padding-bottom:4px">{lbl}</div>',
+                f'color:#3d6070;padding-bottom:4px">{lbl}</div>',
                 unsafe_allow_html=True,
             )
         for job in recent_jobs:

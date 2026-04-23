@@ -1,9 +1,6 @@
 """
 app/pages/page_login.py
-Sterling Stormwater — Professional dark login screen.
-
-Fix: Split st.markdown calls so base64 logo data never trips the
-markdown parser into treating subsequent HTML as a code block.
+Sterling Stormwater — Professional dark login screen with sign-up.
 """
 
 import base64
@@ -26,16 +23,24 @@ def render():
     background: #06141C !important;
     min-height: 100vh !important;
 }
-/* Reset sidebar margin — no sidebar on login page */
+/* Reset sidebar — no sidebar on login page */
+section[data-testid="stMain"],
 [data-testid="stMain"] {
     margin-left: 0 !important;
+    padding-left: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    left: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
 }
-[data-testid="stSidebar"] {
-    display: none !important;
-}
+[data-testid="stSidebar"] { display: none !important; }
+section[data-testid="stMain"] > div { width: 100% !important; }
 .block-container,
 [data-testid="stMainBlockContainer"] {
     max-width: 440px !important;
+    width: 100% !important;
     margin: 0 auto !important;
     padding: 0 !important;
     padding-top: 5vh !important;
@@ -120,123 +125,201 @@ def render():
     color: #3D4D5C;
     letter-spacing: 0.06em;
 }
+/* Secondary link-style button */
+div[data-testid="stButton"] button[kind="secondary"] {
+    background: transparent !important;
+    border: none !important;
+    color: #4A9EBE !important;
+    font-size: 13px !important;
+    padding: 4px 0 !important;
+    box-shadow: none !important;
+}
+div[data-testid="stButton"] button[kind="secondary"]:hover {
+    color: #6BB8D4 !important;
+    text-decoration: underline !important;
+}
+.sw-divider {
+    display: flex; align-items: center; gap: 12px;
+    color: #3D4D5C; font-size: 12px;
+    margin: 4px 0 8px;
+}
+.sw-divider::before,.sw-divider::after {
+    content:''; flex:1;
+    border-top: 1px solid rgba(255,255,255,0.07);
+}
 </style>
 
 <div class="sw-glow-blob"></div>
 <div class="sw-grid-bg"></div>
 """, unsafe_allow_html=True)
 
-    # ── 2. Logo (separate call — keeps base64 isolated from card HTML) ────────
+    # ── 2. Logo ───────────────────────────────────────────────────────────────
     if _LOGO_PATH.exists():
         logo_b64 = base64.b64encode(_LOGO_PATH.read_bytes()).decode()
         st.markdown(
-            f'<div style="text-align:center;position:relative;z-index:1;'
+            f'<div style="text-align:center;position:relative;z-index:10;'
             f'margin-bottom:-12px;padding-top:4px">'
             f'<img src="data:image/png;base64,{logo_b64}" '
-            f'style="height:44px;display:inline-block;'
+            f'style="height:44px!important;width:auto!important;'
+            f'display:inline-block!important;visibility:visible!important;'
             f'filter:drop-shadow(0 0 24px rgba(26,183,56,0.45))" />'
             f'</div>',
             unsafe_allow_html=True,
         )
 
-    # ── 3. Card header (no base64 here) ───────────────────────────────────────
-    st.markdown("""
+    mode = st.session_state.get("login_mode", "signin")
+
+    # ── 3. Card header ────────────────────────────────────────────────────────
+    if mode == "signup":
+        eyebrow, title, sub = "Create Account", "Join Sterling", "Set up your team account"
+    elif mode == "reset":
+        eyebrow, title, sub = "Field Service Platform", "Reset Password", "Choose a new password"
+    else:
+        eyebrow, title, sub = "Field Service Platform", "Sign in to Sterling", "Report Generator &amp; Field Documentation"
+
+    st.markdown(f"""
 <div class="sw-login-card">
     <div class="sw-login-card-topbar"></div>
-    <div class="sw-login-eyebrow">Field Service Platform</div>
-    <div class="sw-login-title">Sign in to Sterling</div>
-    <div class="sw-login-sub">Report Generator &amp; Field Documentation</div>
+    <div class="sw-login-eyebrow">{eyebrow}</div>
+    <div class="sw-login-title">{title}</div>
+    <div class="sw-login-sub">{sub}</div>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 4. Streamlit form (native widgets, styled by global CSS) ─────────────
-    mode = st.session_state.get("login_mode", "signin")
-
+    # ── 4. Forms ──────────────────────────────────────────────────────────────
     if mode == "signin":
-        with st.form("login_form", border=False):
-            email    = st.text_input("Email",    placeholder="you@sterlingstormwater.com")
-            password = st.text_input("Password", type="password", placeholder="••••••••")
-            submit   = st.form_submit_button(
-                "Sign In  →", type="primary", use_container_width=True
-            )
-
-        if submit:
-            if not email or not password:
-                st.error("Enter your email and password.")
-                return
-            with st.spinner("Signing in…"):
-                result = login(email, password)
-            if result and result.get("access_token"):
-                st.session_state["token"]        = result["access_token"]
-                st.session_state["current_user"] = result["user"]
-                st.rerun()
-            else:
-                from app.services.db import local_login
-                if local_login(email, password):
-                    st.session_state["token"]        = "local"
-                    st.session_state["current_user"] = {
-                        "email": email,
-                        "name":  email.split("@")[0].replace(".", " ").title(),
-                    }
-                    st.rerun()
-                else:
-                    st.error("Invalid email or password.")
-
-        st.markdown(
-            '<div style="text-align:center;margin-top:10px">',
-            unsafe_allow_html=True,
-        )
-        if st.button("Forgot password?", key="goto_reset",
-                     help="Reset your local password"):
-            st.session_state["login_mode"] = "reset"
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
+        _render_signin()
+    elif mode == "signup":
+        _render_signup()
     elif mode == "reset":
-        st.markdown(
-            '<div style="text-align:center;color:#9699a6;font-size:13px;'
-            'margin-bottom:12px">Enter your email and choose a new password.</div>',
-            unsafe_allow_html=True,
-        )
-        with st.form("reset_form", border=False):
-            r_email    = st.text_input("Email", placeholder="you@sterlingstormwater.com")
-            r_pw1      = st.text_input("New password",     type="password", placeholder="••••••••")
-            r_pw2      = st.text_input("Confirm password", type="password", placeholder="••••••••")
-            r_submit   = st.form_submit_button(
-                "Reset Password", type="primary", use_container_width=True
-            )
-
-        if r_submit:
-            from app.services.db import set_local_password, get_conn
-            if not r_email or not r_pw1:
-                st.error("Email and new password are required.")
-            elif r_pw1 != r_pw2:
-                st.error("Passwords don't match.")
-            elif len(r_pw1) < 8:
-                st.error("Password must be at least 8 characters.")
-            else:
-                # Verify email exists
-                try:
-                    c = get_conn()
-                    row = c.execute(
-                        "SELECT email FROM local_users WHERE email=?", (r_email,)
-                    ).fetchone()
-                except Exception:
-                    row = None
-                if not row:
-                    st.error("No account found for that email.")
-                else:
-                    set_local_password(r_email, r_pw1)
-                    st.success("Password updated. You can now sign in.")
-                    st.session_state["login_mode"] = "signin"
-                    st.rerun()
-
-        if st.button("← Back to sign in", key="back_to_signin"):
-            st.session_state["login_mode"] = "signin"
-            st.rerun()
+        _render_reset()
 
     # ── 5. Footer ─────────────────────────────────────────────────────────────
     st.markdown(
         '<div class="sw-footer">Sterling Stormwater Maintenance Services, Inc</div>',
         unsafe_allow_html=True,
     )
+
+
+def _render_signin():
+    with st.form("login_form", border=False):
+        email    = st.text_input("Email",    placeholder="you@sterlingstormwater.com")
+        password = st.text_input("Password", type="password", placeholder="••••••••")
+        submit   = st.form_submit_button(
+            "Sign In  →", type="primary", use_container_width=True
+        )
+
+    if submit:
+        if not email or not password:
+            st.error("Enter your email and password.")
+            return
+        with st.spinner("Signing in…"):
+            result = login(email, password)
+        if result and result.get("access_token"):
+            st.session_state["token"]        = result["access_token"]
+            st.session_state["current_user"] = result["user"]
+            st.rerun()
+        else:
+            from app.services.db import local_login
+            if local_login(email, password):
+                st.session_state["token"]        = "local"
+                st.session_state["current_user"] = {
+                    "email": email,
+                    "name":  email.split("@")[0].replace(".", " ").title(),
+                }
+                st.rerun()
+            else:
+                st.error("Invalid email or password.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Forgot password?", key="goto_reset"):
+            st.session_state["login_mode"] = "reset"
+            st.rerun()
+    with col2:
+        st.markdown('<div style="text-align:right">', unsafe_allow_html=True)
+        if st.button("Create account", key="goto_signup"):
+            st.session_state["login_mode"] = "signup"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+def _render_signup():
+    with st.form("signup_form", border=False):
+        name    = st.text_input("Full Name",        placeholder="Jane Smith")
+        email   = st.text_input("Work Email",       placeholder="you@sterlingstormwater.com")
+        pw1     = st.text_input("Password",         type="password", placeholder="••••••••")
+        pw2     = st.text_input("Confirm Password", type="password", placeholder="••••••••")
+        submit  = st.form_submit_button(
+            "Create Account  →", type="primary", use_container_width=True
+        )
+
+    if submit:
+        if not email or not pw1 or not name:
+            st.error("Name, email, and password are required.")
+            return
+        if pw1 != pw2:
+            st.error("Passwords don't match.")
+            return
+        if len(pw1) < 8:
+            st.error("Password must be at least 8 characters.")
+            return
+        from app.services.db import create_local_user
+        ok = create_local_user(email.strip(), pw1, name.strip())
+        if not ok:
+            st.error("An account with that email already exists.")
+            return
+        st.session_state["token"]        = "local"
+        st.session_state["current_user"] = {"email": email.strip(), "name": name.strip()}
+        st.session_state["onboarding_pending"] = True
+        st.session_state.pop("login_mode", None)
+        st.rerun()
+
+    st.markdown('<div style="text-align:center">', unsafe_allow_html=True)
+    if st.button("← Back to sign in", key="back_from_signup"):
+        st.session_state["login_mode"] = "signin"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+def _render_reset():
+    st.markdown(
+        '<div style="text-align:center;color:#9699a6;font-size:13px;'
+        'margin-bottom:12px">Enter your email and choose a new password.</div>',
+        unsafe_allow_html=True,
+    )
+    with st.form("reset_form", border=False):
+        r_email  = st.text_input("Email",            placeholder="you@sterlingstormwater.com")
+        r_pw1    = st.text_input("New password",     type="password", placeholder="••••••••")
+        r_pw2    = st.text_input("Confirm password", type="password", placeholder="••••••••")
+        r_submit = st.form_submit_button(
+            "Reset Password", type="primary", use_container_width=True
+        )
+
+    if r_submit:
+        from app.services.db import set_local_password, get_conn
+        if not r_email or not r_pw1:
+            st.error("Email and new password are required.")
+        elif r_pw1 != r_pw2:
+            st.error("Passwords don't match.")
+        elif len(r_pw1) < 8:
+            st.error("Password must be at least 8 characters.")
+        else:
+            try:
+                c   = get_conn()
+                row = c.execute(
+                    "SELECT email FROM local_users WHERE email=?", (r_email,)
+                ).fetchone()
+            except Exception:
+                row = None
+            if not row:
+                st.error("No account found for that email.")
+            else:
+                set_local_password(r_email, r_pw1)
+                st.success("Password updated. You can now sign in.")
+                st.session_state["login_mode"] = "signin"
+                st.rerun()
+
+    if st.button("← Back to sign in", key="back_to_signin"):
+        st.session_state["login_mode"] = "signin"
+        st.rerun()

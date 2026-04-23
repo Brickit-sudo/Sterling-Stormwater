@@ -3,7 +3,7 @@ app/components/styles.py
 Sterling Stormwater — refactored design system.
 
 Key changes from previous version:
-  - Text contrast lifted: primary #f0f2f6, secondary #b8bbc8, muted #7c7f96
+  - Text contrast lifted: primary #e8f0f3, secondary #c5dae2, muted #8aabb8
   - Card grid: minmax(240px) auto-fill, eliminates dead zone on wide screens
   - Sidebar logo: full-width 60px height
   - Collapse button: full-width strip below logo
@@ -24,22 +24,22 @@ def inject_styles():
    DESIGN TOKENS
 ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  --bg-base:     #181b34;
-  --bg-surface:  #1c1f3b;
-  --bg-elevated: #30324e;
-  --bg-overlay:  #363a52;
-  --bg-input:    #2a2d4a;
+  --bg-base:     #0a1a22;
+  --bg-surface:  #0d1f29;
+  --bg-elevated: #112130;
+  --bg-overlay:  #0f1e28;
+  --bg-input:    #091620;
 
   --border-subtle:  rgba(255,255,255,0.06);
-  --border-default: #4b4e69;
+  --border-default: #1e3545;
   --border-strong:  rgba(255,255,255,0.22);
   --border-accent:  rgba(26,183,56,0.40);
 
   /* ── Contrast-lifted text scale ── */
-  --text-primary:   #f0f2f6;
-  --text-secondary: #b8bbc8;
-  --text-muted:     #7c7f96;
-  --text-disabled:  #4b4e69;
+  --text-primary:   #e8f0f3;
+  --text-secondary: #c5dae2;
+  --text-muted:     #8aabb8;
+  --text-disabled:  #4a6070;
   --text-on-green:  #04140A;
 
   --green:       #1AB738;
@@ -55,7 +55,7 @@ def inject_styles():
   --motion-base: 150ms;
   --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
 
-  --sidebar-width:  230px;
+  --sidebar-width:  220px;
   --topbar-height:  52px;
   --viewtab-height: 40px;
   --content-offset: calc(var(--topbar-height) + var(--viewtab-height));
@@ -502,6 +502,8 @@ button[data-testid^="stBaseButton"]:disabled {
   width: 100% !important;
   object-fit: contain !important;
   object-position: left center !important;
+  display: block !important;
+  visibility: visible !important;
 }
 
 [data-testid="stSidebar"] .stMarkdown p,
@@ -523,43 +525,20 @@ button[data-testid^="stBaseButton"]:disabled {
   padding-bottom: 0 !important;
 }
 
-/* Sidebar nav buttons — target button element directly via kind attr (Streamlit 1.55+) */
-[data-testid="stSidebar"] button[kind="secondary"] {
-  background: transparent !important;
-  border: none !important;
-  color: #9699a6 !important;
-  border-radius: 6px !important;
-  display: flex !important;
-  flex-direction: row !important;
-  justify-content: flex-start !important;
-  align-items: center !important;
-  text-align: left !important;
-  font-size: 13px !important;
-  font-weight: 400 !important;
-  padding: 7px 8px 7px 6px !important;
-  height: 36px !important;
-  min-height: 36px !important;
-  width: 100% !important;
-  transition: background var(--motion-fast) var(--ease-out),
-              color var(--motion-fast) var(--ease-out) !important;
-}
-[data-testid="stSidebar"] button[kind="secondary"] > *,
-[data-testid="stSidebar"] button[kind="secondary"] [data-testid="stMarkdownContainer"],
-[data-testid="stSidebar"] button[kind="secondary"] p {
-  margin: 0 !important;
-  width: 100% !important;
-  text-align: left !important;
-  justify-content: flex-start !important;
-}
-[data-testid="stSidebar"] button[kind="secondary"]:hover {
-  background: var(--bg-overlay) !important;
-  color: var(--text-primary) !important;
+/* ── Nav HTML items hover ── */
+[data-testid="stSidebar"] .sw-nv:hover {
+  background: rgba(255,255,255,0.04) !important;
+  color: #e8f0f3 !important;
 }
 
-/* Active nav item */
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div:has([data-testid="stMarkdownContainer"]:has(.sw-nav.sw-active)) + div button[kind="secondary"] {
-  color: #1AB738 !important;
-  font-weight: 600 !important;
+/* ── Nav trigger buttons: JS clicks these; take no visual space ── */
+[data-testid="stSidebar"] [class*="st-key-nav_"] {
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* Primary buttons in sidebar (Save/New) */
