@@ -570,48 +570,89 @@ def _ensure_geo_columns() -> None:
 
 
 def geocode_sites() -> int:
-    """Populate lat/lng for sites with a zip but no coordinates. Returns count updated."""
+    """Populate lat/lng for sites missing coordinates. Returns count updated.
+
+    Pass 1 — zip-based via pgeocode (fast offline lookup).
+    Pass 2 — city/state via geopy Nominatim for sites with no zip (capped at 20
+              unique city/state pairs per call to avoid timeout on Railway).
+    """
     _ensure_geo_columns()
     c = get_conn()
-    rows = c.execute(
+    updated = 0
+
+    # ── Pass 1: zip-based geocoding ───────────────────────────────────────────
+    zip_rows = c.execute(
         "SELECT site_id, zip FROM crm_sites WHERE lat IS NULL AND zip IS NOT NULL AND zip != ''"
     ).fetchall()
-    if not rows:
-        return 0
-    try:
-        import pgeocode
-        import pandas as pd
-        nomi = pgeocode.Nominatim("US")
-    except ImportError:
-        return 0
-
-    zip_to_sites: dict[str, list[str]] = {}
-    for r in rows:
-        zp = (r["zip"] or "").strip()[:5]
-        if zp:
-            zip_to_sites.setdefault(zp, []).append(r["site_id"])
-
-    updated = 0
-    for zp, site_ids in zip_to_sites.items():
+    if zip_rows:
         try:
-            res = nomi.query_postal_code(zp)
-            lat = float(res.latitude)
-            lng = float(res.longitude)
-            if pd.notna(lat) and pd.notna(lng):
-                for sid in site_ids:
-                    c.execute("UPDATE crm_sites SET lat=?, lng=? WHERE site_id=?",
-                              (lat, lng, sid))
-                    updated += 1
+            import pgeocode
+            import pandas as pd
+            nomi = pgeocode.Nominatim("US")
+            zip_to_sites: dict[str, list[str]] = {}
+            for r in zip_rows:
+                zp = (r["zip"] or "").strip()[:5]
+                if zp:
+                    zip_to_sites.setdefault(zp, []).append(r["site_id"])
+            for zp, site_ids in zip_to_sites.items():
+                try:
+                    res = nomi.query_postal_code(zp)
+                    lat = float(res.latitude)
+                    lng = float(res.longitude)
+                    if pd.notna(lat) and pd.notna(lng):
+                        for sid in site_ids:
+                            c.execute("UPDATE crm_sites SET lat=?, lng=? WHERE site_id=?",
+                                      (lat, lng, sid))
+                            updated += 1
+                except Exception:
+                    continue
+            c.commit()
         except Exception:
-            continue
-    c.commit()
+            pass
+
+    # ── Pass 2: city/state fallback via geopy (for sites with no zip) ─────────
+    no_zip = c.execute(
+        "SELECT site_id, city, state FROM crm_sites "
+        "WHERE lat IS NULL AND (zip IS NULL OR zip='') "
+        "AND city IS NOT NULL AND city!='' AND state IS NOT NULL AND state!=''"
+    ).fetchall()
+    if no_zip:
+        try:
+            import time
+            from geopy.geocoders import Nominatim as GeoNom
+            geo = GeoNom(user_agent="sterling-stormwater-crm-v1")
+            seen: dict[str, tuple | None] = {}
+            for r in no_zip:
+                key = f"{r['city']},{r['state']}"
+                if key not in seen:
+                    if len(seen) >= 20:   # cap API calls per page-load
+                        break
+                    try:
+                        loc = geo.geocode(f"{r['city']}, {r['state']}, USA", timeout=5)
+                        seen[key] = (loc.latitude, loc.longitude) if loc else None
+                        time.sleep(1.1)
+                    except Exception:
+                        seen[key] = None
+                coords = seen.get(key)
+                if coords:
+                    c.execute("UPDATE crm_sites SET lat=?, lng=? WHERE site_id=?",
+                              (coords[0], coords[1], r["site_id"]))
+                    updated += 1
+            c.commit()
+        except Exception:
+            pass
+
     return updated
 
 
 def get_sites_with_coords() -> list[dict]:
+    """Return all geocoded sites with full CRM fields for map popup rendering."""
     _ensure_geo_columns()
     c = get_conn()
-    return [dict(r) for r in c.execute(
-        "SELECT site_id, name, city, state, status, managed_by, budget, "
-        "submittal_due_date, lat, lng FROM crm_sites WHERE lat IS NOT NULL AND lng IS NOT NULL"
-    ).fetchall()]
+    return [dict(r) for r in c.execute("""
+        SELECT site_id, name, address, city, state, zip, status, managed_by, budget,
+               submittal_due_date, contract_start, contract_end,
+               last_inspection_date, next_service_date,
+               systems, contact, email, phone, notes, lat, lng
+        FROM crm_sites WHERE lat IS NOT NULL AND lng IS NOT NULL
+    """).fetchall()]

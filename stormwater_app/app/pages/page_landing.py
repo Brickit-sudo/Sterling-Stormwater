@@ -269,7 +269,7 @@ def render_map():
     show_subs     = tc5.checkbox("🟠 Submittals",  value=True,  key="map_subs")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Build map (Leaflet + ESRI satellite) ──────────────────────────────────
+    # ── Build map (Leaflet + ESRI satellite + rich popups) ────────────────────
     import json, random as _rnd
 
     _SITE_HEX = {"Active": "#1ab738", "Inactive": "#9699a6", "On Hold": "#ffcb00"}
@@ -279,71 +279,209 @@ def render_map():
         "Complete": "#00c875",
     }
 
-    site_pts, job_pts, sub_pts = [], [], []
+    # Group jobs by site_id (last 5 per site, most recent first)
+    jobs_by_site: dict[str, list] = {}
+    for j in all_jobs:
+        sid = j.get("site_id")
+        if sid:
+            jobs_by_site.setdefault(sid, []).append(j)
+
+    site_pts: list[dict] = []
+    job_pts:  list[dict] = []
+    sub_pts:  list[dict] = []
     sites_by_id = {s["site_id"]: s for s in sites_with_coords}
+
+    td = datetime.date.today().isoformat()
 
     for s in sites_with_coords:
         sv = s.get("status", "Active") or "Active"
         if sv == "Active"   and not show_active:   continue
         if sv == "Inactive" and not show_inactive: continue
         if sv == "On Hold"  and not show_hold:     continue
-        site_pts.append({"lat": s["lat"], "lng": s["lng"],
-                         "name": s.get("name",""), "city": s.get("city",""),
-                         "state": s.get("state",""), "status": sv,
-                         "color": _SITE_HEX.get(sv, "#579bfc")})
+        site_jobs = jobs_by_site.get(s["site_id"], [])
+        site_pts.append({
+            "lat":  s["lat"],  "lng": s["lng"],
+            "site_id": s.get("site_id", ""),
+            "name":  s.get("name", ""),
+            "address": s.get("address", "") or "",
+            "city":  s.get("city", "") or "",
+            "state": s.get("state", "") or "",
+            "status": sv,
+            "color": _SITE_HEX.get(sv, "#579bfc"),
+            "managed_by": s.get("managed_by", "") or "",
+            "contact": s.get("contact", "") or "",
+            "email":   s.get("email", "") or "",
+            "phone":   s.get("phone", "") or "",
+            "systems": s.get("systems", "") or "",
+            "budget":  s.get("budget"),
+            "submittal_due_date":  s.get("submittal_due_date", "") or "",
+            "contract_end":        s.get("contract_end", "") or "",
+            "last_inspection_date": s.get("last_inspection_date", "") or "",
+            "next_service_date":   s.get("next_service_date", "") or "",
+            "notes": (s.get("notes", "") or "")[:200],
+            "jobs": [
+                {
+                    "job_status":    j.get("job_status", ""),
+                    "service":       j.get("service", "") or j.get("job_site", "") or "—",
+                    "scheduled_date": j.get("scheduled_date", "") or "",
+                    "quoted_amount": j.get("quoted_amount"),
+                    "owner":         (j.get("owner", "") or "").split()[0] if j.get("owner") else "",
+                }
+                for j in site_jobs[:5]
+            ],
+        })
 
     if show_jobs:
         for j in all_jobs:
             site = sites_by_id.get(j.get("site_id"))
             if not site or not site.get("lat"): continue
-            rng = _rnd.Random(j.get("job_id",""))
-            job_pts.append({"lat": site["lat"] + rng.uniform(-0.005,0.005),
-                            "lng": site["lng"] + rng.uniform(-0.005,0.005),
-                            "name": j.get("job_site",""), "status": j.get("job_status",""),
-                            "color": _JOB_HEX.get(j.get("job_status",""), "#579bfc")})
+            rng = _rnd.Random(j.get("job_id", ""))
+            job_pts.append({
+                "lat": site["lat"] + rng.uniform(-0.005, 0.005),
+                "lng": site["lng"] + rng.uniform(-0.005, 0.005),
+                "name": j.get("job_site", ""), "status": j.get("job_status", ""),
+                "color": _JOB_HEX.get(j.get("job_status", ""), "#579bfc"),
+            })
 
     if show_subs:
-        td = datetime.date.today().isoformat()
-        sub_pts = [{"lat": s["lat"], "lng": s["lng"], "name": s.get("name","")}
+        sub_pts = [{"lat": s["lat"], "lng": s["lng"], "name": s.get("name", "")}
                    for s in sites_with_coords
                    if s.get("submittal_due_date") and s["submittal_due_date"] >= td]
 
-    map_html = """<!DOCTYPE html><html><head><meta charset="utf-8">
+    map_html = (
+        """<!DOCTYPE html><html><head><meta charset="utf-8">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>html,body{margin:0;padding:0;height:100%;background:#06141C}
+<style>
+html,body{margin:0;padding:0;height:100%;background:#06141C}
 #map{width:100%;height:500px}
+/* Tooltip (hover) */
 .sw-tip{background:#0d1f29!important;border:1px solid rgba(255,255,255,0.12)!important;
-border-radius:6px!important;color:#d5d8df!important;font-family:system-ui!important;
-font-size:12px!important;padding:5px 9px!important;box-shadow:0 4px 16px rgba(0,0,0,.5)!important}
+  border-radius:6px!important;color:#d5d8df!important;font-family:system-ui,sans-serif!important;
+  font-size:12px!important;padding:5px 9px!important;box-shadow:0 4px 16px rgba(0,0,0,.5)!important}
 .leaflet-tooltip.sw-tip::before{display:none}
-.leaflet-control-attribution{background:rgba(10,26,34,0.85)!important;color:#3d6070!important;font-size:10px!important}
+/* Dark popup */
+.leaflet-popup-content-wrapper{
+  background:#0d1f29!important;border:1px solid rgba(255,255,255,0.13)!important;
+  border-radius:10px!important;box-shadow:0 10px 40px rgba(0,0,0,.7)!important;
+  padding:0!important;overflow:hidden}
+.leaflet-popup-content{margin:0!important;line-height:1.4;min-width:310px}
+.leaflet-popup-tip{background:#0d1f29!important}
+.leaflet-popup-close-button{color:#8aabb8!important;font-size:20px!important;
+  top:8px!important;right:10px!important;z-index:10}
+.leaflet-popup-close-button:hover{color:#e8f0f3!important}
+/* Attribution */
+.leaflet-control-attribution{background:rgba(10,26,34,.85)!important;color:#3d6070!important;font-size:10px!important}
 .leaflet-control-attribution a{color:#4a9ebe!important}
 </style></head><body><div id="map"></div><script>
-var map=L.map('map',{zoomControl:true}).setView([42.8,-72.5],7);
+var map=L.map('map',{zoomControl:true}).setView([39.5,-98.4],5);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-{maxZoom:19,attribution:'&copy; Esri &mdash; Earthstar Geographics'}).addTo(map);
+  {maxZoom:19,attribution:'&copy; Esri &mdash; Earthstar Geographics'}).addTo(map);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-{maxZoom:19,opacity:0.75}).addTo(map);
-""" + f"""
-var sites={json.dumps(site_pts)};
-var jobs={json.dumps(job_pts)};
-var subs={json.dumps(sub_pts)};
-""" + """
+  {maxZoom:19,opacity:0.75}).addTo(map);
+"""
+        + f"var sites={json.dumps(site_pts)};\n"
+          f"var jobs={json.dumps(job_pts)};\n"
+          f"var subs={json.dumps(sub_pts)};\n"
+        + r"""
+// ── Popup builder ────────────────────────────────────────────────────────────
+function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';}
+function fmtD(d){if(!d)return '';var p=d.split('-');return (p[1]||'')+'/'+( p[2]||'')+'/'+( p[0]||'');}
+function buildPopup(s){
+  var SC={Active:'#1ab738',Inactive:'#9699a6','On Hold':'#ffcb00'};
+  var JC={'Need to Schedule':'#e2445c','Scheduled':'#ffcb00','Report in Progress':'#579bfc','Ready for Review':'#a25ddc','Complete':'#00c875'};
+  var sc=SC[s.status]||'#579bfc';
+  var today=new Date().toISOString().slice(0,10);
+  var thisMonth=today.slice(0,7);
+
+  function chip(lbl,d){
+    if(!d)return '';
+    var col=d<today?'#e2445c':d.slice(0,7)===thisMonth?'#ffcb00':'#4a6070';
+    return '<span style="background:'+col+'22;color:'+col+';padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap;margin:1px">'+lbl+': '+fmtD(d)+'</span>';
+  }
+
+  var deadlines=[chip('Submittal',s.submittal_due_date),chip('Contract',s.contract_end),chip('Svc',s.next_service_date)].filter(Boolean);
+
+  var sysBadges=(s.systems||'').split(',').filter(function(x){return x.trim();}).map(function(sys){
+    return '<span style="background:rgba(26,183,56,.14);color:#5ad4a0;padding:2px 7px;border-radius:3px;font-size:10px;margin:1px;display:inline-block">'+esc(sys.trim())+'</span>';
+  }).join('');
+
+  var jobs=s.jobs||[];
+  var jobHtml=jobs.length===0
+    ?'<div style="font-size:11px;color:#4a6070;padding:2px 0">No jobs on record</div>'
+    :jobs.map(function(j){
+      var jc=JC[j.job_status]||'#9699a6';
+      return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05)">'
+        +'<span style="background:'+jc+'22;color:'+jc+';padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap">'+esc(j.job_status)+'</span>'
+        +'<span style="font-size:11px;color:#c5dae2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(j.service||'—')+'</span>'
+        +(j.scheduled_date?'<span style="font-size:10px;color:#6e6f8f;flex-shrink:0">'+fmtD(j.scheduled_date)+'</span>':'')
+        +(j.quoted_amount?'<span style="font-size:11px;color:#1ab738;flex-shrink:0;margin-left:4px">$'+Number(j.quoted_amount).toLocaleString()+'</span>':'')
+        +'</div>';
+    }).join('');
+
+  var contactHtml='';
+  if(s.contact)contactHtml+='<div style="font-size:12px;color:#c5dae2;margin-bottom:3px">'+esc(s.contact)+'</div>';
+  if(s.phone)contactHtml+='<a href="tel:'+esc(s.phone)+'" style="font-size:11px;color:#579bfc;margin-right:10px;text-decoration:none">📞 '+esc(s.phone)+'</a>';
+  if(s.email)contactHtml+='<a href="mailto:'+esc(s.email)+'" style="font-size:11px;color:#579bfc;text-decoration:none">✉ '+esc(s.email)+'</a>';
+
+  var addr=[s.address,s.city,s.state].filter(Boolean).join(', ');
+
+  return '<div style="font-family:system-ui,-apple-system,sans-serif;color:#d5d8df">'
+    // ── Header ──
+    +'<div style="padding:13px 36px 11px 14px;border-bottom:1px solid rgba(255,255,255,0.08)">'
+    +'<div style="font-size:14px;font-weight:700;color:#e8f0f3;margin-bottom:3px">'+esc(s.name)+'</div>'
+    +(addr?'<div style="font-size:11px;color:#8aabb8;margin-bottom:7px">'+esc(addr)+'</div>':'')
+    +'<span style="background:'+sc+'22;color:'+sc+';padding:2px 9px;border-radius:6px;font-size:10px;font-weight:700">'+esc(s.status)+'</span>'
+    +(s.budget?' <span style="font-size:11px;color:#6e6f8f;margin-left:6px">Budget: $'+Number(s.budget).toLocaleString()+'</span>':'')
+    +(s.last_inspection_date?'<div style="font-size:10px;color:#4a6070;margin-top:5px">Last inspection: '+fmtD(s.last_inspection_date)+'</div>':'')
+    +'</div>'
+    // ── Deadlines ──
+    +(deadlines.length?'<div style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:4px;flex-wrap:wrap">'+deadlines.join('')+'</div>':'')
+    // ── BMP Systems ──
+    +(sysBadges?'<div style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.08)">'
+      +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.10em;color:#3d6070;margin-bottom:5px">BMP Systems</div>'
+      +sysBadges+'</div>':'')
+    // ── Jobs ──
+    +'<div style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.08)">'
+    +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.10em;color:#3d6070;margin-bottom:5px">Jobs ('+jobs.length+' shown)</div>'
+    +jobHtml+'</div>'
+    // ── Contact ──
+    +(contactHtml?'<div style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.08)">'
+      +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.10em;color:#3d6070;margin-bottom:4px">Contact</div>'
+      +contactHtml+'</div>':'')
+    // ── Footer ──
+    +'<div style="padding:6px 14px;font-size:10px;color:#3d6070;display:flex;justify-content:space-between">'
+    +'<span>'+esc(s.site_id)+'</span>'
+    +(s.managed_by?'<span>'+esc(s.managed_by)+'</span>':'')
+    +'</div>'
+    +'</div>';
+}
+
+// ── Render layers ────────────────────────────────────────────────────────────
+var bounds=[];
 sites.forEach(function(s){
-  L.circleMarker([s.lat,s.lng],{radius:11,color:s.color,weight:0,fillColor:s.color,fillOpacity:0.18}).addTo(map);
+  bounds.push([s.lat,s.lng]);
+  // Outer glow
+  L.circleMarker([s.lat,s.lng],{radius:11,color:s.color,weight:0,fillColor:s.color,fillOpacity:0.18,interactive:false}).addTo(map);
+  // Inner dot — click opens popup, hover shows quick tip
   L.circleMarker([s.lat,s.lng],{radius:5,color:'#fff',weight:1.5,fillColor:s.color,fillOpacity:0.92})
-   .bindTooltip('<b>'+s.name+'</b><br>'+s.city+', '+s.state+'<br><span style="color:'+s.color+'">'+s.status+'</span>',
-     {className:'sw-tip',sticky:true}).addTo(map);
+   .bindTooltip('<b>'+esc(s.name)+'</b><br>'+esc(s.city)+', '+esc(s.state)+'<br><span style="color:'+s.color+'">'+esc(s.status)+'</span>',
+     {className:'sw-tip',sticky:false,offset:[8,0]})
+   .bindPopup(buildPopup(s),{maxWidth:380,className:'sw-popup'})
+   .addTo(map);
 });
 jobs.forEach(function(j){
   L.circleMarker([j.lat,j.lng],{radius:4,color:'#fff',weight:1,fillColor:j.color,fillOpacity:0.88})
-   .bindTooltip('<b>'+j.name+'</b><br>'+j.status,{className:'sw-tip',sticky:true}).addTo(map);
+   .bindTooltip('<b>'+esc(j.name)+'</b><br>'+esc(j.status),{className:'sw-tip',sticky:true}).addTo(map);
 });
 subs.forEach(function(s){
-  L.circleMarker([s.lat,s.lng],{radius:13,color:'#fd7e14',weight:2,fillColor:'#fd7e14',fillOpacity:0.18}).addTo(map);
+  L.circleMarker([s.lat,s.lng],{radius:13,color:'#fd7e14',weight:2,fillColor:'#fd7e14',fillOpacity:0.18,interactive:false}).addTo(map);
 });
+// Fit map to site bounds if we have data
+if(bounds.length>1){map.fitBounds(bounds,{padding:[40,40],maxZoom:10});}
+else if(bounds.length===1){map.setView(bounds[0],12);}
 </script></body></html>"""
+    )
 
     if sites_with_coords:
         st.components.v1.html(map_html, height=505)
